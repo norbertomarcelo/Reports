@@ -1,4 +1,5 @@
 using FluentAssertions;
+using AzureDevOpsEntities = Reports.Modules.AzureDevOps.Entities;
 
 namespace Reports.UnitTests.Modules.AzureDevOps.Project;
 
@@ -27,7 +28,7 @@ public class ProjectTest
             LastUpdateDate = _fixture.GetValidDate(),
         };
 
-        var project = new Reports.Modules.AzureDevOps.Entities.Project(
+        var project = new AzureDevOpsEntities.Project(
             validObject.Id,
             validObject.Name,
             validObject.Url,
@@ -61,7 +62,7 @@ public class ProjectTest
             LastUpdateDate = _fixture.GetValidDate(),
         };
 
-        var project = new Reports.Modules.AzureDevOps.Entities.Project(
+        var project = new AzureDevOpsEntities.Project(
             validObject.Id,
             validObject.Name,
             validObject.Url,
@@ -70,7 +71,7 @@ public class ProjectTest
             validObject.Visibility,
             validObject.LastUpdateDate);
         
-        project.Should().BeOfType<Reports.Modules.AzureDevOps.Entities.Project>();
+        project.Should().BeOfType<AzureDevOpsEntities.Project>();
         project.Id.GetType().Should().BeAssignableTo<Guid>();
         project.Name.Should().BeOfType<string>();
         project.Url.Should().BeOfType<string>();

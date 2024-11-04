@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Reports.UnitTests", "tests\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Reports.Modules.AzureDevOps", "src\Reports.Modules.AzureDevOps\Reports.Modules.AzureDevOps.csproj", "{61EC1B31-F6A7-4842-AF76-75856B6EAA25}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Reports.IntegrationTests", "tests\Reports.IntegrationTests\Reports.IntegrationTests.csproj", "{FCF462FF-E0ED-442B-A5B5-48611CE0A6D9}"
+EndProject
 Global
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -21,6 +23,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{887EDD60-A978-47E4-AB4F-CD360C927970} = {F465757F-BDF1-4ADC-8768-E04831541D71}
 		{61EC1B31-F6A7-4842-AF76-75856B6EAA25} = {E64E1DD0-3BF7-48BE-82A8-85C9E8B3DE33}
+		{FCF462FF-E0ED-442B-A5B5-48611CE0A6D9} = {F465757F-BDF1-4ADC-8768-E04831541D71}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{61EC1B31-F6A7-4842-AF76-75856B6EAA25}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -31,6 +34,10 @@ Global
 		{887EDD60-A978-47E4-AB4F-CD360C927970}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{887EDD60-A978-47E4-AB4F-CD360C927970}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{887EDD60-A978-47E4-AB4F-CD360C927970}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCF462FF-E0ED-442B-A5B5-48611CE0A6D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCF462FF-E0ED-442B-A5B5-48611CE0A6D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCF462FF-E0ED-442B-A5B5-48611CE0A6D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCF462FF-E0ED-442B-A5B5-48611CE0A6D9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
