@@ -2,20 +2,43 @@
 
 namespace Reports.Api.Controllers;
 
+[Route("[controller]")]
 public class AzureDevOpsController : ControllerBase
 {
+    private readonly IConfiguration _configuration;
+    private readonly string _coreServer;
+    private readonly string _organization;
+    private readonly string _project;
+    private readonly string _apiVersion;
+    private readonly string _accessToken;
+    private readonly IHttpClientFactory _httpClientFactory;
+
+
+    public AzureDevOpsController(IConfiguration configuration, IHttpClientFactory httpClientFactory)
+    {
+        _configuration = configuration;
+        _coreServer = _configuration.GetValue<string>("AzureDevOps:CoreSerever");
+        _organization = _configuration.GetValue<string>("AzureDevOps:Organization");
+        _project = _configuration.GetValue<string>("AzureDevOps:Project");
+        _apiVersion = _configuration.GetValue<string>("AzureDevOps:ApiVersion");
+        _accessToken = _configuration.GetValue<string>("AzureDevOps:AccessToken");
+        _httpClientFactory = httpClientFactory;
+    }
+
+    [HttpGet("/project")]
     public async Task<IActionResult> ListAllProjectsAsync()
     {
-        var url = "https://dev.azure.com/MNS-Tech/_apis/projects?api-version=5.0";
+        var endpoint = $"/{_organization}/_apis/projects?api-version={_apiVersion}";
 
-        using (HttpClient client = new HttpClient())
+        var client = _httpClientFactory.CreateClient("AzureDevOps");
+        var response = await client.GetAsync(endpoint);
+
+        if (!response.IsSuccessStatusCode)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Add("Authorization", "G3rF6XTzpxUBK0hk1toWJO82ZYKYsBv1icT8Svdpb4yOQNO4l6jtJQQJ99BBACAAAAAAAAAAAAASAZDO47sb");
-
-            string resposta = await client.GetStringAsync(url);
-            Console.WriteLine(resposta);
+            return StatusCode((int)response.StatusCode, "Error fetching projects");
         }
-        return Ok();
+
+        var content = await response.Content.ReadAsStringAsync();
+        return Ok(content);
     }
 }
