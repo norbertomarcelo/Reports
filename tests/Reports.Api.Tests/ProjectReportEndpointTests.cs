@@ -26,7 +26,7 @@ public class ProjectReportEndpointTests
                 services.AddSingleton<IPdfRenderer>(pdf);
             }));
 
-        var response = await factory.CreateClient().GetAsync("/project");
+        var response = await factory.CreateClient().GetAsync("/report");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);

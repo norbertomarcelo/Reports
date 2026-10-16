@@ -13,7 +13,7 @@ public class AzureDevOpsController : ControllerBase
         _reportService = reportService;
     }
 
-    [HttpGet("/project")]
+    [HttpGet("/report")]
     public async Task<IActionResult> GenerateReportAsync()
     {
         var result = await _reportService.GenerateReportAsync();
