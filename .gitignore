@@ -482,3 +482,31 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Ferramentas de IA (instruções, configurações e memória locais)
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+AGENTS.md
+GEMINI.md
+.gemini/
+.cursor/
+.cursorrules
+.cursorignore
+.windsurfrules
+.windsurf/
+.github/copilot-instructions.md
+.aider*
+.continue/
+.codex/
+
+# Variações de .env (segredos locais)
+.env.*
+!.env.example
+
+# Especificações (spec-driven) mantidas apenas localmente
+specs/
+
+# Configurações da aplicação (podem conter segredos)
+appsettings.json
+appsettings.*.json
