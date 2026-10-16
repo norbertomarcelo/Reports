@@ -1,4 +1,5 @@
 using Reports.Api.Services;
+using Reports.Api.Services.Pdf;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<AzureDevOpsService, AzureDevOpsService>();
+builder.Services.AddSingleton<IPdfRenderer, PlaywrightPdfRenderer>();
 
 var app = builder.Build();
 
