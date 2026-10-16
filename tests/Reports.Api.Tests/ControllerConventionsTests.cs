@@ -12,7 +12,7 @@ public class ControllerConventionsTests(ApiFactory factory) : IClassFixture<ApiF
         var endpoints = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints;
 
         var endpoint = Assert.Single(endpoints.OfType<RouteEndpoint>(),
-            e => e.RoutePattern.RawText == "report");
+            e => e.RoutePattern.RawText == "azure-devops");
 
         Assert.NotNull(endpoint.Metadata.GetMetadata<ApiControllerAttribute>());
     }
