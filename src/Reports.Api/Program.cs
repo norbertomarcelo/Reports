@@ -1,5 +1,6 @@
 using Reports.Api.Services;
 using Reports.Api.Services.Pdf;
+using Reports.Api.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddOptions<AzureDevOpsOptions>()
+    .BindConfiguration(AzureDevOpsOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 builder.Services.AddSingleton<AzureDevOpsService, AzureDevOpsService>();
 builder.Services.AddSingleton<IPdfRenderer, PlaywrightPdfRenderer>();
