@@ -3,6 +3,7 @@ using Reports.Api.Services;
 
 namespace Reports.Api.Controllers;
 
+[ApiController]
 [Route("[controller]")]
 public class AzureDevOpsController : ControllerBase
 {
