@@ -1,131 +1,55 @@
-﻿using Newtonsoft.Json;
-using Razor.Templating.Core;
-using Reports.Api.Dtos.Responses;
+using Microsoft.Extensions.Options;
+using Refit;
+using Reports.Api.Interfaces;
 using Reports.Api.Models;
-using System.Net.Http.Headers;
-using System.Text;
+using Reports.Api.Settings;
 
 namespace Reports.Api.Services;
 
 public class AzureDevOpsService
 {
-    private readonly IConfiguration _configuration;
-    private readonly string _coreServer;
-    private readonly string _organization;
-    private readonly string _project;
-    private readonly string _apiVersion;
-    private readonly string _accessToken;
+    private readonly IAzureDevOpsApi _api;
+    private readonly AzureDevOpsOptions _options;
 
-    public AzureDevOpsService(IConfiguration configuration)
+    public AzureDevOpsService(IAzureDevOpsApi api, IOptions<AzureDevOpsOptions> options)
     {
-        _configuration = configuration;
-        _coreServer = _configuration.GetValue<string>("AzureDevOps:CoreSerever");
-        _organization = _configuration.GetValue<string>("AzureDevOps:Organization");
-        _project = _configuration.GetValue<string>("AzureDevOps:Project");
-        _apiVersion = _configuration.GetValue<string>("AzureDevOps:ApiVersion");
-        _accessToken = _configuration.GetValue<string>("AzureDevOps:AccessToken");
-
+        _api = api;
+        _options = options.Value;
     }
 
     public async Task<IEnumerable<Project>> GetAllProjectsAsync()
     {
-        var apiUrl = $"{_coreServer}/{_organization}/_apis/projects?api-version={_apiVersion}";
-
-        using (HttpClient client = new HttpClient())
-        {
-            var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{_accessToken}"));
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
-
-            try
-            {
-                var response = await client.GetAsync(apiUrl);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var result = await response.Content.ReadAsStringAsync();
-                    var projectsResponse = JsonConvert.DeserializeObject<ProjectsResponse>(result);
-                    return projectsResponse?.Value ?? new List<Project>();
-                }
-                else
-                {
-                    throw new Exception($"Erro ao obter projetos: {response.StatusCode} - {response.ReasonPhrase}");
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Erro ao buscar projetos do Azure DevOps.", ex);
-            }
-        }
+        var response = await CallAsync("projetos",
+            () => _api.GetProjectsAsync(_options.Organization, _options.ApiVersion));
+        return response?.Value ?? new List<Project>();
     }
 
     public async Task<IEnumerable<Team>> GetTeamsPerProjectAsync(string projectId)
     {
-        var apiUrl = $"{_coreServer}/{_organization}/_apis/projects/{projectId}/teams?$mine=false&$top=false&$skip=&api-version={_apiVersion}";
-
-        using (HttpClient client = new HttpClient())
-        {
-            var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{_accessToken}"));
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
-
-            try
-            {
-                var response = await client.GetAsync(apiUrl);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var result = await response.Content.ReadAsStringAsync();
-                    var teamsResponse = JsonConvert.DeserializeObject<TeamsResponse>(result);
-                    return teamsResponse?.Value ?? new List<Team>();
-                }
-                else
-                {
-                    throw new Exception($"Erro ao obter projetos: {response.StatusCode} - {response.ReasonPhrase}");
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Erro ao buscar projetos do Azure DevOps.", ex);
-            }
-        }
+        var response = await CallAsync("equipes",
+            () => _api.GetTeamsAsync(_options.Organization, projectId, _options.ApiVersion));
+        return response?.Value ?? new List<Team>();
     }
 
     public async Task<IEnumerable<TeamMember>> GetTeamMembersAsync(string projectId, string teamId)
     {
-        var apiUrl = $"{_coreServer}/{_organization}/_apis/projects/{projectId}/teams/{teamId}/members?$mine=false&$top=10&$skip&api-version={_apiVersion}";
-
-        using (HttpClient client = new HttpClient())
-        {
-            var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{_accessToken}"));
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
-
-            try
-            {
-                var response = await client.GetAsync(apiUrl);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var result = await response.Content.ReadAsStringAsync();
-                    var teamMembersResponse = JsonConvert.DeserializeObject<TeamMembersResponse>(result);
-                    return teamMembersResponse?.Value ?? new List<TeamMember>();
-                }
-                else
-                {
-                    throw new Exception($"Erro ao obter projetos: {response.StatusCode} - {response.ReasonPhrase}");
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Erro ao buscar projetos do Azure DevOps.", ex);
-            }
-        }
+        var response = await CallAsync("membros da equipe",
+            () => _api.GetTeamMembersAsync(_options.Organization, projectId, teamId, _options.ApiVersion));
+        return response?.Value ?? new List<TeamMember>();
     }
 
-    public async Task<byte[]> GenerateIndexAsync()
+    private static async Task<T?> CallAsync<T>(string resource, Func<Task<T>> call)
     {
-        var projectList = await this.GetAllProjectsAsync();
-        var html = await RazorTemplateEngine.RenderAsync("Views/Index.cshtml", projectList);
-        var render = new ChromePdfRenderer();
-        using var pdfDocument = render.RenderHtmlAsPdf(html);
-        return pdfDocument.BinaryData;
+        try
+        {
+            return await call();
+        }
+        catch (ApiException ex)
+        {
+            throw new AzureDevOpsException(
+                $"Erro ao obter {resource} do Azure DevOps: {(int)ex.StatusCode} - {ex.ReasonPhrase}",
+                ex.StatusCode,
+                ex);
+        }
     }
 }

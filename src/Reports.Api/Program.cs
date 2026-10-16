@@ -14,8 +14,10 @@ builder.Services.AddOptions<AzureDevOpsOptions>()
     .BindConfiguration(AzureDevOpsOptions.SectionName)
     .ValidateDataAnnotations()
     .ValidateOnStart();
+builder.Services.AddAzureDevOpsClient();
 
-builder.Services.AddSingleton<AzureDevOpsService, AzureDevOpsService>();
+builder.Services.AddScoped<AzureDevOpsService>();
+builder.Services.AddScoped<ReportService>();
 builder.Services.AddSingleton<IPdfRenderer, PlaywrightPdfRenderer>();
 
 var app = builder.Build();

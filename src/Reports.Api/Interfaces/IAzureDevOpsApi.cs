@@ -1,10 +1,25 @@
-﻿using Refit;
-using Reports.Api.Dtos;
+using Refit;
+using Reports.Api.Dtos.Responses;
 
 namespace Reports.Api.Interfaces;
 
 public interface IAzureDevOpsApi
 {
-    [Get("/MNS-Tech/_apis/projects?api-version=5.0")]
-    Task<IEnumerable<ProjectDto>> GetAllProjectsAsync();
+    [Get("/{organization}/_apis/projects")]
+    Task<ProjectsResponse> GetProjectsAsync(
+        string organization,
+        [AliasAs("api-version")] string apiVersion);
+
+    [Get("/{organization}/_apis/projects/{projectId}/teams")]
+    Task<TeamsResponse> GetTeamsAsync(
+        string organization,
+        string projectId,
+        [AliasAs("api-version")] string apiVersion);
+
+    [Get("/{organization}/_apis/projects/{projectId}/teams/{teamId}/members")]
+    Task<TeamMembersResponse> GetTeamMembersAsync(
+        string organization,
+        string projectId,
+        string teamId,
+        [AliasAs("api-version")] string apiVersion);
 }

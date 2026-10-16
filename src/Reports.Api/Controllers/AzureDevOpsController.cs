@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Reports.Api.Services;
 
 namespace Reports.Api.Controllers;
@@ -6,17 +6,17 @@ namespace Reports.Api.Controllers;
 [Route("[controller]")]
 public class AzureDevOpsController : ControllerBase
 {
-    private readonly AzureDevOpsService _service;
+    private readonly ReportService _reportService;
 
-    public AzureDevOpsController(AzureDevOpsService service)
+    public AzureDevOpsController(ReportService reportService)
     {
-        _service = service;
+        _reportService = reportService;
     }
 
     [HttpGet("/project")]
-    public async Task<IActionResult> ListAllProjectsAsync()
+    public async Task<IActionResult> GenerateReportAsync()
     {
-        var result = await _service.GenerateIndexAsync();
+        var result = await _reportService.GenerateReportAsync();
         return File(result, "application/pdf", "index.pdf");
     }
 }
