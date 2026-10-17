@@ -1,0 +1,40 @@
+@using Reports.Api.Views.Models
+
+@model IReadOnlyList<ProjectRow>
+
+@if (Model.Count == 0)
+{
+    <p>Nenhum projeto encontrado.</p>
+}
+else
+{
+    <table class="table table-striped table-bordered projetos">
+        <thead class="thead-dark">
+            <tr>
+                <th>Nome</th>
+                <th>Estado</th>
+                <th>Visibilidade</th>
+                <th>Processo</th>
+                <th>Controle de versão</th>
+                <th>Git habilitado</th>
+                <th>Permissões do Git configuradas</th>
+                <th>Última Atualização</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var project in Model)
+            {
+                <tr>
+                    <td>@project.Name</td>
+                    <td>@(project.State ?? "—")</td>
+                    <td>@(project.Visibility ?? "—")</td>
+                    <td>@(project.Details.Process ?? "—")</td>
+                    <td>@(project.Details.SourceControl ?? "—")</td>
+                    <td>@(project.Details.GitEnabled ?? "—")</td>
+                    <td>@(project.Details.GitPermissionsInitialized ?? "—")</td>
+                    <td>@project.LastUpdateTime.ToString("dd/MM/yyyy HH:mm")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

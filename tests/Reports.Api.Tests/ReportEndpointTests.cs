@@ -13,7 +13,7 @@ public class ReportEndpointTests
     {
         var api = new FakeAzureDevOpsApi
         {
-            Projects = [new Project { Name = "Projeto Alfa", State = "wellFormed", Visibility = "private" }]
+            Projects = [new Project { Id = "p1", Name = "Projeto Alfa", State = "wellFormed", Visibility = "private" }]
         };
         var pdf = new FakePdfRenderer();
         using var factory = ReportHost.Create(api, pdf);

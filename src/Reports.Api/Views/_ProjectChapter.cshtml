@@ -1,0 +1,77 @@
+@using Reports.Api.Views.Models
+
+@model ProjectChapter
+
+<h1>@(Model.Number). @Model.Name</h1>
+
+@if (Model.Teams is not null)
+{
+    <h2>@Model.Teams.Number Times</h2>
+
+    @if (Model.Teams.Content.Count == 0)
+    {
+        <p>Nenhum time encontrado.</p>
+    }
+    else
+    {
+        <table class="table table-striped table-bordered">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Time</th>
+                    <th>Descrição</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var team in Model.Teams.Content)
+                {
+                    <tr>
+                        <td>@team.Team</td>
+                        <td>@team.Description</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@if (Model.UsersByTeam is not null)
+{
+    <h2>@Model.UsersByTeam.Number Usuários por time</h2>
+
+    @if (Model.UsersByTeam.Content.Count == 0)
+    {
+        <p>Nenhum time encontrado.</p>
+    }
+
+    @foreach (var team in Model.UsersByTeam.Content)
+    {
+        <h3>@team.Number @team.Team</h3>
+
+        @if (team.Users.Count == 0)
+        {
+            <p>Nenhum usuário encontrado.</p>
+        }
+        else
+        {
+            <table class="table table-striped table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Nome</th>
+                        <th>E-mail</th>
+                        <th>Administrador</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in team.Users)
+                    {
+                        <tr>
+                            <td>@user.Name</td>
+                            <td>@user.Email</td>
+                            <td>@(user.IsAdmin ? "Sim" : "Não")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+}

@@ -32,44 +32,81 @@ public class ReportService
     {
         var projects = (await _azureDevOps.GetAllProjectsAsync()).ToList();
 
-        var teams = new List<(Project Project, Team Team)>();
-        if (sections.Teams || sections.Users)
+        var projectRows = new List<ProjectRow>();
+        if (sections.Projects)
         {
+            // Uma chamada por vez, na ordem da listagem (sem Task.WhenAll), por decisão da spec 013.
             foreach (var project in projects)
             {
-                var projectTeams = await _azureDevOps.GetTeamsPerProjectAsync(project.Id);
-                teams.AddRange(projectTeams.Select(team => (project, team)));
+                var properties = await _azureDevOps.GetProjectPropertiesAsync(project.Id);
+                projectRows.Add(new ProjectRow(
+                    project.Name,
+                    ProjectLabels.State(project.State),
+                    ProjectLabels.Visibility(project.Visibility),
+                    project.LastUpdateTime,
+                    ProjectPropertiesReader.Read(properties)));
             }
         }
 
-        var users = new List<UserRow>();
+        // Times por projeto e membros por time (chaves: id), buscados só quando alguma seção precisa.
+        var teamsByProject = new Dictionary<string, List<Team>>();
+        if (sections.Teams || sections.Users)
+        {
+            foreach (var project in projects)
+                teamsByProject[project.Id] = (await _azureDevOps.GetTeamsPerProjectAsync(project.Id)).ToList();
+        }
+
+        var membersByTeam = new Dictionary<string, List<TeamMember>>();
         if (sections.Users)
         {
-            foreach (var (project, team) in teams)
+            foreach (var project in projects)
             {
-                var members = await _azureDevOps.GetTeamMembersAsync(project.Id, team.Id);
-                users.AddRange(members.Select(member => new UserRow(
-                    project.Name,
-                    team.Name,
-                    member.Identity?.DisplayName ?? string.Empty,
-                    member.Identity?.UniqueName,
-                    member.IsTeamAdmin)));
+                foreach (var team in teamsByProject[project.Id])
+                    membersByTeam[team.Id] = (await _azureDevOps.GetTeamMembersAsync(project.Id, team.Id)).ToList();
             }
+        }
+
+        var orderedProjects = projects.OrderBy(p => p.Name, Comparer).ToList();
+        var outline = ReportOutline.Build(sections,
+            orderedProjects.Select(p => teamsByProject.GetValueOrDefault(p.Id)?.Count ?? 0).ToList());
+
+        var chapters = new List<ProjectChapter>();
+        for (var i = 0; i < outline.ProjectChapters.Count; i++)
+        {
+            var project = orderedProjects[i];
+            var numbers = outline.ProjectChapters[i];
+            var teams = teamsByProject[project.Id].OrderBy(t => t.Name, Comparer).ToList();
+
+            chapters.Add(new ProjectChapter(
+                numbers.Chapter,
+                project.Name,
+                numbers.Teams is null
+                    ? null
+                    : new Chapter<IReadOnlyList<TeamRow>>(numbers.Teams,
+                        teams.Select(t => new TeamRow(t.Name, t.Description)).ToList()),
+                numbers.UsersByTeam is null
+                    ? null
+                    : new Chapter<IReadOnlyList<TeamUsers>>(numbers.UsersByTeam,
+                        teams.Select((team, n) => new TeamUsers(
+                            numbers.TeamNumbers[n],
+                            team.Name,
+                            membersByTeam[team.Id]
+                                .Select(m => new UserRow(
+                                    m.Identity?.DisplayName ?? string.Empty,
+                                    m.Identity?.UniqueName,
+                                    m.IsTeamAdmin))
+                                .OrderBy(u => u.Name, Comparer)
+                                .ToList())).ToList())));
         }
 
         return new ReportViewModel
         {
-            Projects = sections.Projects
-                ? projects.OrderBy(p => p.Name, Comparer).ToList()
-                : null,
-            Teams = sections.Teams
-                ? teams.Select(t => new TeamRow(t.Project.Name, t.Team.Name, t.Team.Description))
-                    .OrderBy(t => t.Project, Comparer).ThenBy(t => t.Team, Comparer).ToList()
-                : null,
-            Users = sections.Users
-                ? users.OrderBy(u => u.Project, Comparer).ThenBy(u => u.Team, Comparer)
-                    .ThenBy(u => u.Name, Comparer).ToList()
-                : null
+            Projects = outline.Projects is null
+                ? null
+                : new Chapter<IReadOnlyList<ProjectRow>>(outline.Projects,
+                    projectRows.OrderBy(p => p.Name, Comparer).ToList()),
+            ProjectChapters = chapters,
+            NoProjects = !sections.Projects && projects.Count == 0
         };
     }
 }
