@@ -9,6 +9,7 @@ public class ApiFactory : WebApplicationFactory<Program>
     public const string CoreServer = "https://dev.azure.example";
     public const string Organization = "org-teste";
     public const string ApiVersion = "7.1";
+    public const string ProjectPropertiesApiVersion = "7.1-preview.9";
     public const string AccessToken = "pat-teste";
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -20,6 +21,7 @@ public class ApiFactory : WebApplicationFactory<Program>
                 ["AzureDevOps:CoreServer"] = CoreServer,
                 ["AzureDevOps:Organization"] = Organization,
                 ["AzureDevOps:ApiVersion"] = ApiVersion,
+                ["AzureDevOps:ProjectPropertiesApiVersion"] = ProjectPropertiesApiVersion,
                 ["AzureDevOps:AccessToken"] = AccessToken
             }));
     }

@@ -24,6 +24,13 @@ public class AzureDevOpsService
         return response?.Value ?? new List<Project>();
     }
 
+    public async Task<IEnumerable<ProjectProperty>> GetProjectPropertiesAsync(string projectId)
+    {
+        var response = await CallAsync("propriedades do projeto",
+            () => _api.GetProjectPropertiesAsync(_options.Organization, projectId, _options.ProjectPropertiesApiVersion));
+        return response?.Value ?? new List<ProjectProperty>();
+    }
+
     public async Task<IEnumerable<Team>> GetTeamsPerProjectAsync(string projectId)
     {
         var response = await CallAsync("equipes",

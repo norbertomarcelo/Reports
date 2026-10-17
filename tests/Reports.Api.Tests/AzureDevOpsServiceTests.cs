@@ -20,6 +20,7 @@ public class AzureDevOpsServiceTests
             CoreServer = ApiFactory.CoreServer,
             Organization = ApiFactory.Organization,
             ApiVersion = ApiFactory.ApiVersion,
+            ProjectPropertiesApiVersion = ApiFactory.ProjectPropertiesApiVersion,
             AccessToken = ApiFactory.AccessToken
         });
         _service = new AzureDevOpsService(_api, options);
@@ -56,6 +57,41 @@ public class AzureDevOpsServiceTests
 
         Assert.True(Assert.Single(result).IsTeamAdmin);
         Assert.Equal($"members {ApiFactory.Organization} p1 t1 {ApiFactory.ApiVersion}", Assert.Single(_api.Calls));
+    }
+
+    [Fact]
+    public async Task Lista_propriedades_do_projeto_com_a_versao_de_propriedades()
+    {
+        _api.Properties = [new ProjectProperty { Name = "System.Process Template" }];
+
+        var result = await _service.GetProjectPropertiesAsync("p1");
+
+        Assert.Equal("System.Process Template", Assert.Single(result).Name);
+        Assert.Equal(
+            $"properties {ApiFactory.Organization} p1 {ApiFactory.ProjectPropertiesApiVersion}",
+            Assert.Single(_api.Calls));
+    }
+
+    [Fact]
+    public async Task Propriedades_com_value_nulo_voltam_como_lista_vazia()
+    {
+        _api.Properties = null;
+
+        Assert.Empty(await _service.GetProjectPropertiesAsync("p1"));
+    }
+
+    [Fact]
+    public async Task Erro_http_nas_propriedades_vira_AzureDevOpsException_em_portugues()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "https://dev.azure.example/");
+        using var response = new HttpResponseMessage(HttpStatusCode.NotFound) { RequestMessage = request };
+        _api.Error = await ApiException.Create(request, HttpMethod.Get, response, new RefitSettings());
+
+        var ex = await Assert.ThrowsAsync<AzureDevOpsException>(() => _service.GetProjectPropertiesAsync("p1"));
+
+        Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
+        Assert.StartsWith("Erro ao obter propriedades do projeto", ex.Message);
+        Assert.Contains("404", ex.Message);
     }
 
     [Fact]

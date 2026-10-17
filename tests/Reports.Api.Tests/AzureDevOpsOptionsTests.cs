@@ -21,6 +21,29 @@ public class AzureDevOpsOptionsTests
     }
 
     [Fact]
+    public void Le_a_versao_da_api_de_propriedades_do_projeto_da_configuracao()
+    {
+        using var factory = new ApiFactory();
+
+        var options = factory.Services.GetRequiredService<IOptions<AzureDevOpsOptions>>().Value;
+
+        Assert.Equal(ApiFactory.ProjectPropertiesApiVersion, options.ProjectPropertiesApiVersion);
+    }
+
+    [Fact]
+    public void Usa_versao_preview_padrao_quando_a_chave_nao_e_configurada()
+    {
+        Assert.Equal("7.1-preview.1", new AzureDevOpsOptions().ProjectPropertiesApiVersion);
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["AzureDevOps:Organization"] = "org" })
+            .Build();
+        var options = configuration.GetSection(AzureDevOpsOptions.SectionName).Get<AzureDevOpsOptions>()!;
+
+        Assert.Equal("7.1-preview.1", options.ProjectPropertiesApiVersion);
+    }
+
+    [Fact]
     public void Falha_ao_iniciar_sem_AccessToken()
     {
         using var factory = new ApiFactory().WithWebHostBuilder(builder =>

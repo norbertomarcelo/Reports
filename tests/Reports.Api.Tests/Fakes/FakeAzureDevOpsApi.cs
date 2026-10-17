@@ -11,7 +11,10 @@ public class FakeAzureDevOpsApi : IAzureDevOpsApi
     public List<TeamMember>? Members { get; set; } = [];
     public Dictionary<string, List<Team>> TeamsByProject { get; } = [];
     public Dictionary<string, List<TeamMember>> MembersByTeam { get; } = [];
+    public Dictionary<string, List<ProjectProperty>> PropertiesByProject { get; } = [];
+    public List<ProjectProperty>? Properties { get; set; } = [];
     public Exception? Error { get; set; }
+    public Exception? PropertiesError { get; set; }
 
     public List<string> Calls { get; } = [];
 
@@ -19,6 +22,15 @@ public class FakeAzureDevOpsApi : IAzureDevOpsApi
     {
         Calls.Add($"projects {organization} {apiVersion}");
         return Respond(new ProjectsResponse { Count = Projects?.Count ?? 0, Value = Projects! });
+    }
+
+    public Task<ProjectPropertiesResponse> GetProjectPropertiesAsync(string organization, string projectId, string apiVersion)
+    {
+        Calls.Add($"properties {organization} {projectId} {apiVersion}");
+        var properties = PropertiesByProject.TryGetValue(projectId, out var byProject) ? byProject : Properties;
+        if (PropertiesError is not null)
+            return Task.FromException<ProjectPropertiesResponse>(PropertiesError);
+        return Respond(new ProjectPropertiesResponse { Count = properties?.Count ?? 0, Value = properties! });
     }
 
     public Task<TeamsResponse> GetTeamsAsync(string organization, string projectId, string apiVersion)

@@ -10,6 +10,12 @@ public interface IAzureDevOpsApi
         string organization,
         [AliasAs("api-version")] string apiVersion);
 
+    [Get("/{organization}/_apis/projects/{projectId}/properties")]
+    Task<ProjectPropertiesResponse> GetProjectPropertiesAsync(
+        string organization,
+        string projectId,
+        [AliasAs("api-version")] string apiVersion);
+
     [Get("/{organization}/_apis/projects/{projectId}/teams")]
     Task<TeamsResponse> GetTeamsAsync(
         string organization,

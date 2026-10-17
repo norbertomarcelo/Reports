@@ -15,6 +15,10 @@ public class AzureDevOpsOptions
     [Required]
     public string ApiVersion { get; set; } = "7.1";
 
+    /// <summary>O endpoint de propriedades do projeto só existe como versão preview na 7.1.</summary>
+    [Required]
+    public string ProjectPropertiesApiVersion { get; set; } = "7.1-preview.1";
+
     [Required]
     public string AccessToken { get; set; } = string.Empty;
 }
