@@ -44,6 +44,33 @@ public class AzureDevOpsOptionsTests
     }
 
     [Fact]
+    public void Sobe_sem_InternalDomains_com_a_lista_vazia()
+    {
+        using var factory = new ApiFactory();
+
+        factory.CreateClient();
+        var options = factory.Services.GetRequiredService<IOptions<AzureDevOpsOptions>>().Value;
+
+        Assert.Empty(options.InternalDomains);
+    }
+
+    [Fact]
+    public void Le_InternalDomains_da_configuracao()
+    {
+        using var factory = new ApiFactory().WithWebHostBuilder(builder =>
+            builder.ConfigureAppConfiguration((_, config) =>
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["AzureDevOps:InternalDomains:0"] = "empresa.com.br",
+                    ["AzureDevOps:InternalDomains:1"] = "empresa.com"
+                })));
+
+        var options = factory.Services.GetRequiredService<IOptions<AzureDevOpsOptions>>().Value;
+
+        Assert.Equal(["empresa.com.br", "empresa.com"], options.InternalDomains);
+    }
+
+    [Fact]
     public void Falha_ao_iniciar_sem_AccessToken()
     {
         using var factory = new ApiFactory().WithWebHostBuilder(builder =>

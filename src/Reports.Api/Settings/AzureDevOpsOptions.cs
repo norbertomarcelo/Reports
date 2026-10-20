@@ -21,4 +21,7 @@ public class AzureDevOpsOptions
 
     [Required]
     public string AccessToken { get; set; } = string.Empty;
+
+    /// <summary>Domínios de e-mail da organização; quem estiver fora é marcado como externo. Opcional (spec 016).</summary>
+    public string[] InternalDomains { get; set; } = [];
 }
