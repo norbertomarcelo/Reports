@@ -5,8 +5,12 @@ namespace Reports.Api.Services;
 /// <summary>Numeração dos capítulos: <c>null</c> = o nível não existe no relatório.</summary>
 public record Outline(string? Projects, IReadOnlyList<ProjectOutline> ProjectChapters);
 
-/// <summary><c>TeamNumbers</c> só é preenchida com a seção de usuários (um número por time).</summary>
-public record ProjectOutline(string Chapter, string? Teams, string? UsersByTeam, IReadOnlyList<string> TeamNumbers);
+/// <summary>
+/// <c>TeamNumbers</c> só é preenchida com a seção de usuários (um número por time);
+/// <c>ProjectUsers</c> também só existe com ela (spec 016).
+/// </summary>
+public record ProjectOutline(
+    string Chapter, string? Teams, string? UsersByTeam, IReadOnlyList<string> TeamNumbers, string? ProjectUsers);
 
 /// <summary>Calcula a numeração sequencial sobre o que foi incluído no relatório (spec 015, RF-03).</summary>
 public static class ReportOutline
@@ -26,15 +30,17 @@ public static class ReportOutline
                 var sub = 0;
                 var teams = sections.Teams ? $"{number}.{++sub}" : null;
                 string? usersByTeam = null;
+                string? projectUsers = null;
                 var teamNumbers = new List<string>();
                 if (sections.Users)
                 {
                     usersByTeam = $"{number}.{++sub}";
                     for (var team = 1; team <= teamCount; team++)
                         teamNumbers.Add($"{usersByTeam}.{team}");
+                    projectUsers = $"{number}.{++sub}";
                 }
 
-                chapters.Add(new ProjectOutline(number.ToString(), teams, usersByTeam, teamNumbers));
+                chapters.Add(new ProjectOutline(number.ToString(), teams, usersByTeam, teamNumbers, projectUsers));
             }
         }
 
