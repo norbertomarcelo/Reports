@@ -8,6 +8,7 @@ public class ApiFactory : WebApplicationFactory<Program>
 {
     public const string CoreServer = "https://dev.azure.example";
     public const string Organization = "org-teste";
+    public const string AnalyticsServer = "https://analytics.example";
     public const string ApiVersion = "7.1";
     public const string ProjectPropertiesApiVersion = "7.1-preview.9";
     public const string AccessToken = "pat-teste";
@@ -19,6 +20,7 @@ public class ApiFactory : WebApplicationFactory<Program>
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["AzureDevOps:CoreServer"] = CoreServer,
+                ["AzureDevOps:AnalyticsServer"] = AnalyticsServer,
                 ["AzureDevOps:Organization"] = Organization,
                 ["AzureDevOps:ApiVersion"] = ApiVersion,
                 ["AzureDevOps:ProjectPropertiesApiVersion"] = ProjectPropertiesApiVersion,

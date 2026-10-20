@@ -71,6 +71,36 @@ public class AzureDevOpsOptionsTests
     }
 
     [Fact]
+    public void Usa_o_host_padrao_do_Analytics_quando_a_chave_nao_e_configurada()
+    {
+        Assert.Equal("https://analytics.dev.azure.com", new AzureDevOpsOptions().AnalyticsServer);
+    }
+
+    [Fact]
+    public void Le_o_host_do_Analytics_da_configuracao()
+    {
+        using var factory = new ApiFactory();
+
+        var options = factory.Services.GetRequiredService<IOptions<AzureDevOpsOptions>>().Value;
+
+        Assert.Equal(ApiFactory.AnalyticsServer, options.AnalyticsServer);
+    }
+
+    [Fact]
+    public void Falha_ao_iniciar_com_AnalyticsServer_que_nao_e_url()
+    {
+        using var factory = new ApiFactory().WithWebHostBuilder(builder =>
+            builder.ConfigureAppConfiguration((_, config) =>
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["AzureDevOps:AnalyticsServer"] = "nao-e-url"
+                })));
+
+        var ex = Assert.Throws<OptionsValidationException>(() => factory.CreateClient());
+        Assert.Contains(nameof(AzureDevOpsOptions.AnalyticsServer), ex.Message);
+    }
+
+    [Fact]
     public void Falha_ao_iniciar_sem_AccessToken()
     {
         using var factory = new ApiFactory().WithWebHostBuilder(builder =>

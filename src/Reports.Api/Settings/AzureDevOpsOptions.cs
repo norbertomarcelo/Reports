@@ -19,6 +19,10 @@ public class AzureDevOpsOptions
     [Required]
     public string ProjectPropertiesApiVersion { get; set; } = "7.1-preview.1";
 
+    /// <summary>Host do Analytics (OData), usado para contar itens de trabalho já agregados (spec 017).</summary>
+    [Required, Url]
+    public string AnalyticsServer { get; set; } = "https://analytics.dev.azure.com";
+
     [Required]
     public string AccessToken { get; set; } = string.Empty;
 
