@@ -18,12 +18,13 @@ public class ReportViewModel
 /// <summary>Conteúdo numerado de um nível do relatório (ex.: <c>"2.1"</c>).</summary>
 public record Chapter<T>(string Number, T Content);
 
-/// <summary><c>Teams</c> e <c>UsersByTeam</c> <c>null</c> = subcapítulo não pedido.</summary>
+/// <summary><c>Teams</c>, <c>UsersByTeam</c> e <c>ProjectUsers</c> <c>null</c> = subcapítulo não pedido.</summary>
 public record ProjectChapter(
     string Number,
     string Name,
     Chapter<IReadOnlyList<TeamRow>>? Teams,
-    Chapter<IReadOnlyList<TeamUsers>>? UsersByTeam);
+    Chapter<IReadOnlyList<TeamUsers>>? UsersByTeam,
+    Chapter<IReadOnlyList<ProjectUserRow>>? ProjectUsers);
 
 public record TeamUsers(string Number, string Team, IReadOnlyList<UserRow> Users);
 
@@ -34,6 +35,18 @@ public record ProjectRow(
     DateTime LastUpdateTime,
     ProjectDetails Details);
 
-public record TeamRow(string Team, string? Description);
+/// <summary>
+/// <c>MemberCount</c> e <c>AdminCount</c> <c>null</c> = membros não buscados (sem <c>users</c>); grupos não contam.
+/// <c>NoAdmin</c>: o time tem membros (grupos incluídos) e nenhum administrador.
+/// </summary>
+public record TeamRow(string Team, string? Description, int? MemberCount, int? AdminCount, bool NoAdmin);
 
-public record UserRow(string Name, string? Email, bool IsAdmin);
+public record UserRow(string Name, string? Email, bool IsAdmin, bool IsGroup, bool IsExternal);
+
+/// <summary>Usuário do projeto, uma vez só, com os times de que participa e onde é administrador.</summary>
+public record ProjectUserRow(
+    string Name,
+    string? Email,
+    bool IsExternal,
+    IReadOnlyList<string> Teams,
+    IReadOnlyList<string> AdminOf);

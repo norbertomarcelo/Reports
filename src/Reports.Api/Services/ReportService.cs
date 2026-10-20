@@ -1,8 +1,10 @@
 using System.Globalization;
+using Microsoft.Extensions.Options;
 using Razor.Templating.Core;
 using Reports.Api.Dtos.Requests;
 using Reports.Api.Models;
 using Reports.Api.Services.Pdf;
+using Reports.Api.Settings;
 using Reports.Api.Views.Models;
 
 namespace Reports.Api.Services;
@@ -14,11 +16,13 @@ public class ReportService
 
     private readonly AzureDevOpsService _azureDevOps;
     private readonly IPdfRenderer _pdfRenderer;
+    private readonly string[] _internalDomains;
 
-    public ReportService(AzureDevOpsService azureDevOps, IPdfRenderer pdfRenderer)
+    public ReportService(AzureDevOpsService azureDevOps, IPdfRenderer pdfRenderer, IOptions<AzureDevOpsOptions> options)
     {
         _azureDevOps = azureDevOps;
         _pdfRenderer = pdfRenderer;
+        _internalDomains = options.Value.InternalDomains;
     }
 
     public async Task<byte[]> GenerateReportAsync(ReportSections sections)
@@ -77,26 +81,29 @@ public class ReportService
             var numbers = outline.ProjectChapters[i];
             var teams = teamsByProject[project.Id].OrderBy(t => t.Name, Comparer).ToList();
 
+            // Membros do time já classificados (grupo/externo); vazio quando `users` não foi pedido.
+            var members = teams.ToDictionary(t => t.Id, t => membersByTeam.TryGetValue(t.Id, out var list)
+                ? list.Select(ToUserRow).OrderBy(u => u.Row.Name, Comparer).ToList()
+                : []);
+
             chapters.Add(new ProjectChapter(
                 numbers.Chapter,
                 project.Name,
                 numbers.Teams is null
                     ? null
                     : new Chapter<IReadOnlyList<TeamRow>>(numbers.Teams,
-                        teams.Select(t => new TeamRow(t.Name, t.Description)).ToList()),
+                        teams.Select(t => ToTeamRow(t, sections.Users ? members[t.Id] : null)).ToList()),
                 numbers.UsersByTeam is null
                     ? null
                     : new Chapter<IReadOnlyList<TeamUsers>>(numbers.UsersByTeam,
                         teams.Select((team, n) => new TeamUsers(
                             numbers.TeamNumbers[n],
                             team.Name,
-                            membersByTeam[team.Id]
-                                .Select(m => new UserRow(
-                                    m.Identity?.DisplayName ?? string.Empty,
-                                    m.Identity?.UniqueName,
-                                    m.IsTeamAdmin))
-                                .OrderBy(u => u.Name, Comparer)
-                                .ToList())).ToList())));
+                            members[team.Id].Select(m => m.Row).ToList())).ToList()),
+                numbers.ProjectUsers is null
+                    ? null
+                    : new Chapter<IReadOnlyList<ProjectUserRow>>(numbers.ProjectUsers,
+                        ProjectUsers(teams, members))));
         }
 
         return new ReportViewModel
@@ -108,5 +115,57 @@ public class ReportService
             ProjectChapters = chapters,
             NoProjects = !sections.Projects && projects.Count == 0
         };
+    }
+
+    /// <summary>Membro com a linha do relatório e a chave da identidade (para consolidar o projeto).</summary>
+    private sealed record ClassifiedMember(string Key, UserRow Row);
+
+    private ClassifiedMember ToUserRow(TeamMember member)
+    {
+        var email = member.Identity?.UniqueName;
+        var isGroup = MemberClassifier.IsGroup(email);
+        var row = new UserRow(
+            member.Identity?.DisplayName ?? string.Empty,
+            isGroup ? null : email,
+            member.IsTeamAdmin,
+            isGroup,
+            !isGroup && MemberClassifier.IsExternal(email, _internalDomains));
+
+        // Sem id, a identidade é reconhecida pelo uniqueName.
+        return new ClassifiedMember(member.Identity?.Id ?? email ?? row.Name, row);
+    }
+
+    /// <param name="members"><c>null</c> = membros não buscados; as contagens ficam de fora.</param>
+    private static TeamRow ToTeamRow(Team team, List<ClassifiedMember>? members)
+    {
+        if (members is null)
+            return new TeamRow(team.Name, team.Description, null, null, false);
+
+        var people = members.Where(m => !m.Row.IsGroup).ToList();
+        var admins = people.Count(m => m.Row.IsAdmin);
+        return new TeamRow(team.Name, team.Description, people.Count, admins, members.Count > 0 && admins == 0);
+    }
+
+    /// <summary>Usuários do projeto sem repetição e sem grupos; os times seguem a ordem recebida (por nome).</summary>
+    private static List<ProjectUserRow> ProjectUsers(List<Team> teams, Dictionary<string, List<ClassifiedMember>> members)
+    {
+        var users = new Dictionary<string, (UserRow Row, List<string> Teams, List<string> AdminOf)>();
+        foreach (var team in teams)
+        {
+            foreach (var member in members[team.Id].Where(m => !m.Row.IsGroup))
+            {
+                if (!users.TryGetValue(member.Key, out var user))
+                    users[member.Key] = user = (member.Row, [], []);
+
+                user.Teams.Add(team.Name);
+                if (member.Row.IsAdmin)
+                    user.AdminOf.Add(team.Name);
+            }
+        }
+
+        return users.Values
+            .Select(u => new ProjectUserRow(u.Row.Name, u.Row.Email, u.Row.IsExternal, u.Teams, u.AdminOf))
+            .OrderBy(u => u.Name, Comparer)
+            .ToList();
     }
 }

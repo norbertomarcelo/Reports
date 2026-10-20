@@ -23,10 +23,11 @@ public class ReportContentTests
         return api;
     }
 
-    private static async Task<(string Html, FakeAzureDevOpsApi Api)> GerarAsync(FakeAzureDevOpsApi api, string include)
+    private static async Task<(string Html, FakeAzureDevOpsApi Api)> GerarAsync(
+        FakeAzureDevOpsApi api, string include, params string[] internalDomains)
     {
         var pdf = new FakePdfRenderer();
-        using var factory = ReportHost.Create(api, pdf);
+        using var factory = ReportHost.Create(api, pdf, internalDomains);
 
         var response = await factory.CreateClient().PostAsync(ReportHost.Route,
             ReportHost.Json($$"""{ "include": { {{include}} } }"""));
@@ -95,7 +96,9 @@ public class ReportContentTests
             [
                 (1, "1. Projetos"),
                 (1, "2. Alfa"), (2, "2.1 Times"), (2, "2.2 Usuários por time"), (3, "2.2.1 Time M"),
-                (1, "3. Beta"), (2, "3.1 Times"), (2, "3.2 Usuários por time"), (3, "3.2.1 Time A"), (3, "3.2.2 Time Z")
+                (2, "2.3 Usuários do projeto"),
+                (1, "3. Beta"), (2, "3.1 Times"), (2, "3.2 Usuários por time"), (3, "3.2.1 Time A"), (3, "3.2.2 Time Z"),
+                (2, "3.3 Usuários do projeto")
             ],
             Titulos(html));
     }
@@ -125,8 +128,9 @@ public class ReportContentTests
 
         Assert.Equal(
             [
-                (1, "1. Alfa"), (2, "1.1 Usuários por time"), (3, "1.1.1 Time M"),
-                (1, "2. Beta"), (2, "2.1 Usuários por time"), (3, "2.1.1 Time A"), (3, "2.1.2 Time Z")
+                (1, "1. Alfa"), (2, "1.1 Usuários por time"), (3, "1.1.1 Time M"), (2, "1.2 Usuários do projeto"),
+                (1, "2. Beta"), (2, "2.1 Usuários por time"), (3, "2.1.1 Time A"), (3, "2.1.2 Time Z"),
+                (2, "2.2 Usuários do projeto")
             ],
             Titulos(html));
     }
@@ -168,10 +172,10 @@ public class ReportContentTests
         var (html, _) = await GerarAsync(api, """ "users": true """);
 
         var timeA = html[html.IndexOf("1.1.1 Time A", StringComparison.Ordinal)..html.IndexOf("1.1.2 Time B", StringComparison.Ordinal)];
-        var timeB = html[html.IndexOf("1.1.2 Time B", StringComparison.Ordinal)..];
+        var timeB = Trecho(html, "1.1.2 Time B", "1.2 Usuários do projeto");
         Assert.Contains("ana@example.com", timeA);
         Assert.Contains("ana@example.com", timeB);
-        Assert.Equal(2, Contar(html, "ana@example.com"));
+        Assert.Equal(1, Contar(Trecho(html, "1.2 Usuários do projeto"), "ana@example.com"));
     }
 
     [Fact]
@@ -181,8 +185,11 @@ public class ReportContentTests
 
         var (html, _) = await GerarAsync(api, """ "teams": true, "users": true """);
 
-        Assert.Equal([(1, "1. Projeto Alfa"), (2, "1.1 Times"), (2, "1.2 Usuários por time")], Titulos(html));
+        Assert.Equal(
+            [(1, "1. Projeto Alfa"), (2, "1.1 Times"), (2, "1.2 Usuários por time"), (2, "1.3 Usuários do projeto")],
+            Titulos(html));
         Assert.Equal(2, Contar(html, "Nenhum time encontrado."));
+        Assert.Contains("Nenhum usuário encontrado.", Trecho(html, "1.3 Usuários do projeto"));
     }
 
     [Fact]
@@ -216,6 +223,140 @@ public class ReportContentTests
 
         Assert.DoesNotContain(Titulos(html), t => t.Texto is "Times" or "Usuários");
         Assert.DoesNotContain(">Projeto<", html);
+    }
+
+
+    // Spec 016: indicadores de times e usuários.
+
+    private static TeamMember Membro(string id, string nome, string email, bool admin = false) =>
+        new() { IsTeamAdmin = admin, Identity = new Identity { Id = id, DisplayName = nome, UniqueName = email } };
+
+    private static TeamMember Grupo(string nome) =>
+        new() { Identity = new Identity { Id = "g-" + nome, DisplayName = nome, UniqueName = $"[Alfa]\\{nome}" } };
+
+    private static FakeAzureDevOpsApi ApiComUmProjeto(params (string Id, string Nome, List<TeamMember> Membros)[] times)
+    {
+        var api = new FakeAzureDevOpsApi { Projects = [new Project { Id = "p1", Name = "Alfa" }] };
+        api.TeamsByProject["p1"] = times.Select(t => new Team { Id = t.Id, Name = t.Nome }).ToList();
+        foreach (var time in times)
+            api.MembersByTeam[time.Id] = time.Membros;
+        return api;
+    }
+
+    [Fact]
+    public async Task Times_mostram_membros_e_administradores_sem_contar_grupos()
+    {
+        var api = ApiComUmProjeto(("t1", "Time A",
+        [
+            Membro("u1", "Ana", "ana@example.com", admin: true),
+            Membro("u2", "Bia", "bia@example.com"),
+            Membro("u3", "Caio", "caio@example.com"),
+            Grupo("Contributors")
+        ]));
+
+        var (html, _) = await GerarAsync(api, """ "teams": true, "users": true """);
+
+        var times = Trecho(html, "1.1 Times", "1.2 Usuários por time");
+        Assert.Equal(["Time", "Descrição", "Membros", "Administradores"], Cabecalhos(times));
+        Assert.Equal(["3", "1"], Celulas(LinhaCom(times, "Time A"))[2..]);
+    }
+
+    [Fact]
+    public async Task Time_com_membros_e_sem_administrador_mostra_a_nota()
+    {
+        var api = ApiComUmProjeto(
+            ("t1", "Time A", [Membro("u1", "Ana", "ana@example.com"), Membro("u2", "Bia", "bia@example.com")]),
+            ("t2", "Time B", []));
+
+        var (html, _) = await GerarAsync(api, """ "teams": true, "users": true """);
+
+        var times = Trecho(html, "1.1 Times", "1.2 Usuários por time");
+        Assert.Equal(["2", "Sem administrador"], Celulas(LinhaCom(times, "Time A"))[2..]);
+        Assert.Equal(["0", "0"], Celulas(LinhaCom(times, "Time B"))[2..]);
+        Assert.Equal(1, Contar(html, "Sem administrador"));
+    }
+
+    [Fact]
+    public async Task Grupo_aparece_marcado_sem_email_e_fora_de_usuarios_do_projeto()
+    {
+        var api = ApiComUmProjeto(("t1", "Time A", [Membro("u1", "Ana", "ana@example.com"), Grupo("Contributors")]));
+
+        var (html, _) = await GerarAsync(api, """ "users": true """);
+
+        var timeA = Trecho(html, "1.1.1 Time A", "1.2 Usuários do projeto");
+        Assert.Equal(["Contributors Grupo", "", "Não"], Celulas(LinhaCom(timeA, "Contributors")));
+        Assert.DoesNotContain("[Alfa]", html);
+        Assert.DoesNotContain("Contributors", Trecho(html, "1.2 Usuários do projeto"));
+    }
+
+    private static FakeAzureDevOpsApi ApiComDominios() =>
+        ApiComUmProjeto(("t1", "Time A",
+        [
+            Membro("u1", "Ana", "ana@empresa.com.br", admin: true),
+            Membro("u2", "Bia", "bia@EMPRESA.com.br"),
+            Membro("u3", "Carlos", "carlos@gmail.com"),
+            Membro("u4", "Dani", "dani@ti.empresa.com.br")
+        ]));
+
+    [Fact]
+    public async Task Usuario_de_dominio_fora_da_lista_e_marcado_como_externo()
+    {
+        var (html, _) = await GerarAsync(ApiComDominios(), """ "users": true """, "empresa.com.br");
+
+        var timeA = Trecho(html, "1.1.1 Time A", "1.2 Usuários do projeto");
+        var projeto = Trecho(html, "1.2 Usuários do projeto");
+        foreach (var trecho in new[] { timeA, projeto })
+        {
+            Assert.Equal("Ana", Celulas(LinhaCom(trecho, "ana@empresa.com.br"))[0]);
+            Assert.Equal("Bia", Celulas(LinhaCom(trecho, "bia@EMPRESA.com.br"))[0]);
+            Assert.Equal("Carlos Externo", Celulas(LinhaCom(trecho, "carlos@gmail.com"))[0]);
+            Assert.Equal("Dani Externo", Celulas(LinhaCom(trecho, "dani@ti.empresa.com.br"))[0]);
+        }
+    }
+
+    [Fact]
+    public async Task Sem_InternalDomains_ninguem_e_externo()
+    {
+        var (html, _) = await GerarAsync(ApiComDominios(), """ "users": true """);
+
+        Assert.DoesNotContain("Externo", html);
+    }
+
+    [Fact]
+    public async Task Usuarios_do_projeto_lista_cada_usuario_uma_vez_com_seus_times()
+    {
+        var ana = new Identity { Id = "u1", DisplayName = "Ana", UniqueName = "ana@example.com" };
+        var api = ApiComUmProjeto(
+            ("t2", "Time B", [new TeamMember { Identity = ana }, Membro("u2", "Bruno", "bruno@example.com")]),
+            ("t1", "Time A", [new TeamMember { IsTeamAdmin = true, Identity = ana }]));
+
+        var (html, _) = await GerarAsync(api, """ "users": true """);
+
+        var projeto = Trecho(html, "1.2 Usuários do projeto");
+        Assert.Equal(["Nome", "E-mail", "Times", "Administrador em"], Cabecalhos(projeto));
+        Assert.Equal(1, Contar(projeto, "ana@example.com"));
+        Assert.Equal(["Ana", "ana@example.com", "Time A, Time B", "Time A"], Celulas(LinhaCom(projeto, "ana@example.com")));
+        Assert.Equal(["Bruno", "bruno@example.com", "Time B", ""], Celulas(LinhaCom(projeto, "bruno@example.com")));
+    }
+
+    [Fact]
+    public async Task Usuarios_do_projeto_sao_ordenados_por_nome()
+    {
+        var api = ApiComUmProjeto(("t1", "Time A",
+            [Membro("u1", "Zélia", "zelia@example.com"), Membro("u2", "ana", "ana@example.com")]));
+
+        var (html, _) = await GerarAsync(api, """ "users": true """);
+
+        AssertOrdem(Trecho(html, "1.2 Usuários do projeto"), "ana@example.com", "zelia@example.com");
+    }
+
+    private static string Trecho(string html, string de, string? ate = null)
+    {
+        var inicio = html.IndexOf(de, StringComparison.Ordinal);
+        Assert.True(inicio >= 0, de);
+        var fim = ate is null ? html.Length : html.IndexOf(ate, inicio, StringComparison.Ordinal);
+        Assert.True(fim >= 0, ate);
+        return html[inicio..fim];
     }
 
     /// <summary>Cabeçalhos da primeira tabela do trecho.</summary>
@@ -359,7 +500,9 @@ public class ReportContentTests
 
     private static string[] Celulas(string linha) =>
         System.Text.RegularExpressions.Regex.Matches(linha, "<td[^>]*>(.*?)</td>", System.Text.RegularExpressions.RegexOptions.Singleline)
-            .Select(m => System.Text.RegularExpressions.Regex.Replace(m.Groups[1].Value, "<.*?>", "").Trim()).ToArray();
+            .Select(m => System.Text.RegularExpressions.Regex.Replace(
+                System.Text.RegularExpressions.Regex.Replace(m.Groups[1].Value, "<.*?>", ""), "\\s+", " ").Trim())
+            .ToArray();
 
     private static int Contar(string texto, string trecho) =>
         texto.Split(trecho).Length - 1;
