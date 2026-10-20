@@ -9,6 +9,9 @@ namespace Reports.Api.Views.Models;
 public class ReportViewModel
 {
     public Chapter<IReadOnlyList<ProjectRow>>? Projects { get; init; }
+
+    /// <summary>Capítulo geral de itens de trabalho: uma linha por projeto. <c>null</c> = não pedido.</summary>
+    public Chapter<IReadOnlyList<CountRow>>? WorkItems { get; init; }
     public IReadOnlyList<ProjectChapter> ProjectChapters { get; init; } = [];
 
     /// <summary>Organização sem projetos e capítulo de projetos não pedido: só a mensagem.</summary>
@@ -18,13 +21,19 @@ public class ReportViewModel
 /// <summary>Conteúdo numerado de um nível do relatório (ex.: <c>"2.1"</c>).</summary>
 public record Chapter<T>(string Number, T Content);
 
-/// <summary><c>Teams</c>, <c>UsersByTeam</c> e <c>ProjectUsers</c> <c>null</c> = subcapítulo não pedido.</summary>
+/// <summary>
+/// <c>Teams</c>, <c>UsersByTeam</c>, <c>ProjectUsers</c> e <c>WorkItems</c> <c>null</c> = subcapítulo não pedido.
+/// </summary>
 public record ProjectChapter(
     string Number,
     string Name,
     Chapter<IReadOnlyList<TeamRow>>? Teams,
     Chapter<IReadOnlyList<TeamUsers>>? UsersByTeam,
-    Chapter<IReadOnlyList<ProjectUserRow>>? ProjectUsers);
+    Chapter<IReadOnlyList<ProjectUserRow>>? ProjectUsers,
+    Chapter<WorkItemSummary>? WorkItems);
+
+/// <summary>Tabela de contagem (abertos/fechados) com a linha Total; <c>Header</c> nomeia a primeira coluna.</summary>
+public record CountTable(string Header, IReadOnlyList<CountRow> Rows, long Open, long Closed);
 
 public record TeamUsers(string Number, string Team, IReadOnlyList<UserRow> Users);
 

@@ -3,14 +3,19 @@ using Reports.Api.Dtos.Requests;
 namespace Reports.Api.Services;
 
 /// <summary>Numeração dos capítulos: <c>null</c> = o nível não existe no relatório.</summary>
-public record Outline(string? Projects, IReadOnlyList<ProjectOutline> ProjectChapters);
+public record Outline(string? Projects, IReadOnlyList<ProjectOutline> ProjectChapters, string? WorkItems);
 
 /// <summary>
 /// <c>TeamNumbers</c> só é preenchida com a seção de usuários (um número por time);
-/// <c>ProjectUsers</c> também só existe com ela (spec 016).
+/// <c>ProjectUsers</c> também só existe com ela (spec 016). <c>WorkItems</c> é o último subcapítulo (spec 017).
 /// </summary>
 public record ProjectOutline(
-    string Chapter, string? Teams, string? UsersByTeam, IReadOnlyList<string> TeamNumbers, string? ProjectUsers);
+    string Chapter,
+    string? Teams,
+    string? UsersByTeam,
+    IReadOnlyList<string> TeamNumbers,
+    string? ProjectUsers,
+    string? WorkItems);
 
 /// <summary>Calcula a numeração sequencial sobre o que foi incluído no relatório (spec 015, RF-03).</summary>
 public static class ReportOutline
@@ -20,9 +25,10 @@ public static class ReportOutline
     {
         var chapter = 0;
         var projects = sections.Projects ? (++chapter).ToString() : null;
+        var workItemsOverview = sections.WorkItems ? (++chapter).ToString() : null;
 
         var chapters = new List<ProjectOutline>();
-        if (sections.Teams || sections.Users)
+        if (sections.Teams || sections.Users || sections.WorkItems)
         {
             foreach (var teamCount in teamCounts)
             {
@@ -40,10 +46,13 @@ public static class ReportOutline
                     projectUsers = $"{number}.{++sub}";
                 }
 
-                chapters.Add(new ProjectOutline(number.ToString(), teams, usersByTeam, teamNumbers, projectUsers));
+                var workItems = sections.WorkItems ? $"{number}.{++sub}" : null;
+
+                chapters.Add(new ProjectOutline(
+                    number.ToString(), teams, usersByTeam, teamNumbers, projectUsers, workItems));
             }
         }
 
-        return new Outline(projects, chapters);
+        return new Outline(projects, chapters, workItemsOverview);
     }
 }

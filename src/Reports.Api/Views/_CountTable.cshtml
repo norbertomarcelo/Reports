@@ -1,0 +1,31 @@
+@using Reports.Api.Views.Models
+
+@model CountTable
+
+<table class="table table-striped table-bordered">
+    <thead class="thead-dark">
+        <tr>
+            <th>@Model.Header</th>
+            <th>Abertos</th>
+            <th>Fechados</th>
+            <th>Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var row in Model.Rows)
+        {
+            <tr>
+                <td>@row.Name</td>
+                <td class="numero">@row.Open</td>
+                <td class="numero">@row.Closed</td>
+                <td class="numero">@row.Total</td>
+            </tr>
+        }
+        <tr class="total">
+            <td>Total</td>
+            <td class="numero">@Model.Open</td>
+            <td class="numero">@Model.Closed</td>
+            <td class="numero">@(Model.Open + Model.Closed)</td>
+        </tr>
+    </tbody>
+</table>

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Reports.Api.Models;
+using Reports.Api.Services;
 using Reports.Api.Tests.Fakes;
 
 namespace Reports.Api.Tests;
@@ -348,6 +349,219 @@ public class ReportContentTests
         var (html, _) = await GerarAsync(api, """ "users": true """);
 
         AssertOrdem(Trecho(html, "1.2 Usuários do projeto"), "ana@example.com", "zelia@example.com");
+    }
+
+    // Spec 017: contagem de itens de trabalho.
+
+    private static WorkItemGroup Grupo(string tipo, string categoria, string? area, long total) =>
+        new()
+        {
+            WorkItemType = tipo,
+            StateCategory = categoria,
+            Area = area is null ? null : new WorkItemArea { AreaPath = area },
+            Count = total
+        };
+
+    private static async Task<string> GerarComItensAsync(
+        FakeAzureDevOpsApi api, FakeAzureDevOpsAnalyticsApi analytics, string include)
+    {
+        var pdf = new FakePdfRenderer();
+        using var factory = ReportHost.Create(api, pdf, analytics);
+
+        var response = await factory.CreateClient().PostAsync(ReportHost.Route,
+            ReportHost.Json($$"""{ "include": { {{include}} } }"""));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return WebUtility.HtmlDecode(pdf.Html!);
+    }
+
+    private static FakeAzureDevOpsApi ProjetoAlfa() =>
+        new() { Projects = [new Project { Id = "pa", Name = "Alfa" }] };
+
+    private static FakeAzureDevOpsAnalyticsApi AnalyticsDeAlfa()
+    {
+        var analytics = new FakeAzureDevOpsAnalyticsApi();
+        analytics.GroupsByProject["Alfa"] =
+        [
+            Grupo("Bug", "InProgress", "Alfa\\Backend", 2),
+            Grupo("Bug", "Completed", "Alfa\\Backend", 1),
+            Grupo("Task", "Proposed", "Alfa\\Frontend", 3),
+            Grupo("Task", "Resolved", "Alfa\\Frontend", 1)
+        ];
+        return analytics;
+    }
+
+    /// <summary>Linhas com células de dados (<c>td</c>) da primeira tabela do trecho.</summary>
+    private static string[][] Linhas(string trecho) =>
+        System.Text.RegularExpressions.Regex.Matches(trecho, "<tr[^>]*>(.*?)</tr>", System.Text.RegularExpressions.RegexOptions.Singleline)
+            .Select(m => Celulas(m.Groups[1].Value))
+            .Where(c => c.Length > 0)
+            .ToArray();
+
+    [Fact]
+    public async Task Sem_a_flag_nao_ha_chamadas_ao_analytics_nem_capitulo_de_itens()
+    {
+        var analytics = AnalyticsDeAlfa();
+
+        var html = await GerarComItensAsync(ApiComDoisProjetos(), analytics,
+            """ "projects": true, "teams": true, "users": true """);
+
+        Assert.Empty(analytics.Calls);
+        Assert.DoesNotContain("Itens de trabalho", html);
+    }
+
+    [Fact]
+    public async Task Faz_uma_chamada_ao_analytics_por_projeto_na_ordem_da_listagem_sem_consultar_times_nem_membros()
+    {
+        var api = ApiComDoisProjetos();
+        var analytics = new FakeAzureDevOpsAnalyticsApi();
+
+        await GerarComItensAsync(api, analytics, """ "workItems": true """);
+
+        Assert.Equal(
+            [
+                $"analytics {ApiFactory.Organization} Beta {AzureDevOpsService.WorkItemGroupsQuery}",
+                $"analytics {ApiFactory.Organization} Alfa {AzureDevOpsService.WorkItemGroupsQuery}"
+            ],
+            analytics.Calls);
+        Assert.Equal([$"projects {ApiFactory.Organization} {ApiFactory.ApiVersion}"], api.Calls);
+    }
+
+    [Fact]
+    public async Task So_itens_de_trabalho_numera_o_capitulo_geral_e_o_subcapitulo_de_cada_projeto()
+    {
+        var html = await GerarComItensAsync(ProjetoAlfa(), AnalyticsDeAlfa(), """ "workItems": true """);
+
+        Assert.Equal(
+            [(1, "1. Itens de trabalho"), (1, "2. Alfa"), (2, "2.1 Itens de trabalho")],
+            Titulos(html));
+    }
+
+    [Fact]
+    public async Task Todas_as_flags_deixam_itens_de_trabalho_como_capitulo_2_e_ultimo_subcapitulo()
+    {
+        var html = await GerarComItensAsync(ApiComDoisProjetos(), new FakeAzureDevOpsAnalyticsApi(),
+            """ "projects": true, "teams": true, "users": true, "workItems": true """);
+
+        Assert.Equal(
+            [
+                (1, "1. Projetos"), (1, "2. Itens de trabalho"),
+                (1, "3. Alfa"), (2, "3.1 Times"), (2, "3.2 Usuários por time"), (3, "3.2.1 Time M"),
+                (2, "3.3 Usuários do projeto"), (2, "3.4 Itens de trabalho"),
+                (1, "4. Beta"), (2, "4.1 Times"), (2, "4.2 Usuários por time"), (3, "4.2.1 Time A"), (3, "4.2.2 Time Z"),
+                (2, "4.3 Usuários do projeto"), (2, "4.4 Itens de trabalho")
+            ],
+            Titulos(html));
+    }
+
+    [Fact]
+    public async Task Subcapitulo_mostra_resumo_e_contagem_por_tipo_e_por_area()
+    {
+        var html = await GerarComItensAsync(ProjetoAlfa(), AnalyticsDeAlfa(), """ "workItems": true """);
+
+        var projeto = Trecho(html, "2.1 Itens de trabalho");
+        Assert.Contains("Total: 7 · Abertos: 6 · Fechados: 1", projeto);
+
+        var porTipo = Trecho(projeto, "Por tipo", "Por área");
+        Assert.Equal(["Tipo", "Abertos", "Fechados", "Total"], Cabecalhos(porTipo));
+        Assert.Equal(
+            [["Bug", "2", "1", "3"], ["Task", "4", "0", "4"], ["Total", "6", "1", "7"]],
+            Linhas(porTipo));
+
+        var porArea = Trecho(projeto, "Por área");
+        Assert.Equal(["Área", "Abertos", "Fechados", "Total"], Cabecalhos(porArea));
+        Assert.Equal(
+            [["Alfa\\Backend", "2", "1", "3"], ["Alfa\\Frontend", "4", "0", "4"], ["Total", "6", "1", "7"]],
+            Linhas(porArea));
+    }
+
+    [Fact]
+    public async Task Item_sem_area_aparece_na_linha_sem_area()
+    {
+        var analytics = new FakeAzureDevOpsAnalyticsApi();
+        analytics.GroupsByProject["Alfa"] = [Grupo("Bug", "Proposed", null, 2), Grupo("Bug", "Proposed", "Alfa\\Backend", 1)];
+
+        var html = await GerarComItensAsync(ProjetoAlfa(), analytics, """ "workItems": true """);
+
+        var porArea = Trecho(html, "Por área");
+        Assert.Equal(
+            [["(sem área)", "2", "0", "2"], ["Alfa\\Backend", "1", "0", "1"], ["Total", "3", "0", "3"]],
+            Linhas(porArea));
+    }
+
+    [Fact]
+    public async Task Capitulo_geral_mostra_abertos_fechados_e_total_por_projeto_com_a_linha_total()
+    {
+        var analytics = new FakeAzureDevOpsAnalyticsApi();
+        analytics.GroupsByProject["Beta"] = [Grupo("Bug", "Proposed", "Beta", 5), Grupo("Bug", "Completed", "Beta", 2)];
+        analytics.GroupsByProject["Alfa"] = [Grupo("Task", "InProgress", "Alfa", 6), Grupo("Task", "Completed", "Alfa", 1)];
+
+        var html = await GerarComItensAsync(ApiComDoisProjetos(), analytics, """ "workItems": true """);
+
+        var geral = Trecho(html, "1. Itens de trabalho", "2. Alfa");
+        Assert.Equal(["Projeto", "Abertos", "Fechados", "Total"], Cabecalhos(geral));
+        Assert.Equal(
+            [["Alfa", "6", "1", "7"], ["Beta", "5", "2", "7"], ["Total", "11", "3", "14"]],
+            Linhas(geral));
+    }
+
+    [Fact]
+    public async Task Projeto_sem_itens_tem_linha_com_zeros_e_a_mensagem_no_subcapitulo()
+    {
+        var html = await GerarComItensAsync(ProjetoAlfa(), new FakeAzureDevOpsAnalyticsApi(), """ "workItems": true """);
+
+        Assert.Equal([["Alfa", "0", "0", "0"], ["Total", "0", "0", "0"]], Linhas(Trecho(html, "1. Itens de trabalho", "2. Alfa")));
+        var projeto = Trecho(html, "2.1 Itens de trabalho");
+        Assert.Contains("Nenhum item de trabalho encontrado.", projeto);
+        Assert.DoesNotContain("<table", projeto);
+    }
+
+    [Fact]
+    public async Task Resposta_com_mais_de_uma_pagina_mostra_o_aviso_de_contagem_parcial_so_no_projeto_afetado()
+    {
+        var analytics = new FakeAzureDevOpsAnalyticsApi();
+        analytics.ProjectsWithNextPage.Add("Beta");
+
+        var html = await GerarComItensAsync(ApiComDoisProjetos(), analytics, """ "workItems": true """);
+
+        Assert.Equal(1, Contar(html, "Contagem parcial"));
+        Assert.Contains("Contagem parcial", Trecho(html, "3. Beta"));
+        Assert.DoesNotContain("Contagem parcial", Trecho(html, "2. Alfa", "3. Beta"));
+    }
+
+    [Fact]
+    public async Task Organizacao_sem_projetos_com_projetos_pedidos_mostra_o_capitulo_com_a_mensagem()
+    {
+        var analytics = new FakeAzureDevOpsAnalyticsApi();
+
+        var html = await GerarComItensAsync(new FakeAzureDevOpsApi(), analytics, """ "projects": true, "workItems": true """);
+
+        Assert.Equal([(1, "1. Projetos"), (1, "2. Itens de trabalho")], Titulos(html));
+        Assert.Contains("Nenhum item de trabalho encontrado.", html);
+        Assert.Empty(analytics.Calls);
+    }
+
+    [Fact]
+    public async Task Organizacao_sem_projetos_e_sem_projects_mostra_so_a_mensagem_de_projetos()
+    {
+        var html = await GerarComItensAsync(new FakeAzureDevOpsApi(), new FakeAzureDevOpsAnalyticsApi(), """ "workItems": true """);
+
+        Assert.Contains("Nenhum projeto encontrado.", html);
+        Assert.Empty(Titulos(html));
+    }
+
+    [Fact]
+    public async Task Falha_no_analytics_interrompe_o_relatorio_sem_gerar_pdf()
+    {
+        var analytics = new FakeAzureDevOpsAnalyticsApi { Error = new InvalidOperationException("falha simulada") };
+        var pdf = new FakePdfRenderer();
+        using var factory = ReportHost.Create(ProjetoAlfa(), pdf, analytics);
+
+        var response = await factory.CreateClient().PostAsync(ReportHost.Route,
+            ReportHost.Json("""{ "include": { "workItems": true } }"""));
+
+        Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(pdf.Html);
     }
 
     private static string Trecho(string html, string de, string? ate = null)

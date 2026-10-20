@@ -146,3 +146,8 @@
         </table>
     }
 }
+
+@if (Model.WorkItems is not null)
+{
+    @await Html.PartialAsync("_WorkItemsSummary", Model.WorkItems)
+}

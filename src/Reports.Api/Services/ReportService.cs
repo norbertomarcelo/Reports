@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.Extensions.Options;
 using Razor.Templating.Core;
 using Reports.Api.Dtos.Requests;
@@ -11,8 +10,7 @@ namespace Reports.Api.Services;
 
 public class ReportService
 {
-    private static readonly StringComparer Comparer =
-        StringComparer.Create(new CultureInfo("pt-BR"), ignoreCase: true);
+    private static readonly StringComparer Comparer = ReportComparer.PtBr;
 
     private readonly AzureDevOpsService _azureDevOps;
     private readonly IPdfRenderer _pdfRenderer;
@@ -70,6 +68,15 @@ public class ReportService
             }
         }
 
+        // Contagem de itens por projeto: uma chamada ao Analytics por vez, na ordem da listagem (spec 017, RF-08).
+        var summaryByProject = new Dictionary<string, WorkItemSummary>();
+        if (sections.WorkItems)
+        {
+            foreach (var project in projects)
+                summaryByProject[project.Id] =
+                    WorkItemCounter.Summarize(await _azureDevOps.GetWorkItemGroupsAsync(project.Name));
+        }
+
         var orderedProjects = projects.OrderBy(p => p.Name, Comparer).ToList();
         var outline = ReportOutline.Build(sections,
             orderedProjects.Select(p => teamsByProject.GetValueOrDefault(p.Id)?.Count ?? 0).ToList());
@@ -79,7 +86,7 @@ public class ReportService
         {
             var project = orderedProjects[i];
             var numbers = outline.ProjectChapters[i];
-            var teams = teamsByProject[project.Id].OrderBy(t => t.Name, Comparer).ToList();
+            var teams = (teamsByProject.GetValueOrDefault(project.Id) ?? []).OrderBy(t => t.Name, Comparer).ToList();
 
             // Membros do time já classificados (grupo/externo); vazio quando `users` não foi pedido.
             var members = teams.ToDictionary(t => t.Id, t => membersByTeam.TryGetValue(t.Id, out var list)
@@ -103,7 +110,10 @@ public class ReportService
                 numbers.ProjectUsers is null
                     ? null
                     : new Chapter<IReadOnlyList<ProjectUserRow>>(numbers.ProjectUsers,
-                        ProjectUsers(teams, members))));
+                        ProjectUsers(teams, members)),
+                numbers.WorkItems is null
+                    ? null
+                    : new Chapter<WorkItemSummary>(numbers.WorkItems, summaryByProject[project.Id])));
         }
 
         return new ReportViewModel
@@ -112,6 +122,13 @@ public class ReportService
                 ? null
                 : new Chapter<IReadOnlyList<ProjectRow>>(outline.Projects,
                     projectRows.OrderBy(p => p.Name, Comparer).ToList()),
+            // Sem `projects` e sem projetos, o relatório mostra só a mensagem de projetos (spec 015, RF-09).
+            WorkItems = outline.WorkItems is null || (!sections.Projects && projects.Count == 0)
+                ? null
+                : new Chapter<IReadOnlyList<CountRow>>(outline.WorkItems,
+                    orderedProjects
+                        .Select(p => new CountRow(p.Name, summaryByProject[p.Id].Open, summaryByProject[p.Id].Closed))
+                        .ToList()),
             ProjectChapters = chapters,
             NoProjects = !sections.Projects && projects.Count == 0
         };

@@ -12,11 +12,11 @@ public class ReportRequestValidationTests
         "{}",
         """{ "include": null }""",
         """{ "include": {} }""",
-        """{ "include": { "projects": false, "teams": false, "users": false } }""",
+        """{ "include": { "projects": false, "teams": false, "users": false, "workItems": false } }""",
         """{ "include": { "projects": "sim" } }""",
         """{ "include": { "projects": 1 } }""",
         """{ "include": { "projects": null } }""",
-        """{ "include": { "projects": true, "workItems": true } }""",
+        """{ "include": { "projects": true, "boards": true } }""",
         """{ "includes": { "projects": true } }""",
         """{ "include": { "projects": true """
     };
@@ -61,11 +61,24 @@ public class ReportRequestValidationTests
         using var factory = ReportHost.Create(new FakeAzureDevOpsApi(), new FakePdfRenderer());
 
         var response = await factory.CreateClient().PostAsync(ReportHost.Route,
-            ReportHost.Json("""{ "include": { "projects": true, "workItems": true } }"""));
+            ReportHost.Json("""{ "include": { "projects": true, "boards": true } }"""));
         var errors = JsonDocument.Parse(await response.Content.ReadAsStringAsync())
             .RootElement.GetProperty("errors");
 
-        Assert.Contains(errors.EnumerateObject(), e => e.Name.Contains("workItems"));
+        Assert.Contains(errors.EnumerateObject(), e => e.Name.Contains("boards"));
+    }
+
+    [Fact]
+    public async Task So_itens_de_trabalho_e_uma_secao_valida()
+    {
+        var pdf = new FakePdfRenderer();
+        using var factory = ReportHost.Create(new FakeAzureDevOpsApi(), pdf);
+
+        var response = await factory.CreateClient().PostAsync(ReportHost.Route,
+            ReportHost.Json("""{ "include": { "workItems": true } }"""));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(pdf.Html);
     }
 
     [Fact]

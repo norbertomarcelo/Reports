@@ -16,10 +16,11 @@ public class ReportSections : IValidatableObject
     public bool Projects { get; set; }
     public bool Teams { get; set; }
     public bool Users { get; set; }
+    public bool WorkItems { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (!Projects && !Teams && !Users)
+        if (!Projects && !Teams && !Users && !WorkItems)
             yield return new ValidationResult("Selecione ao menos uma seção do relatório.");
     }
 }
