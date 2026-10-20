@@ -151,3 +151,8 @@
 {
     @await Html.PartialAsync("_WorkItemsSummary", Model.WorkItems)
 }
+
+@if (Model.Repositories is not null)
+{
+    @await Html.PartialAsync("_RepositoriesTable", Model.Repositories)
+}

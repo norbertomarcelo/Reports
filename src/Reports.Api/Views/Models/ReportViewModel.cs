@@ -22,7 +22,7 @@ public class ReportViewModel
 public record Chapter<T>(string Number, T Content);
 
 /// <summary>
-/// <c>Teams</c>, <c>UsersByTeam</c>, <c>ProjectUsers</c> e <c>WorkItems</c> <c>null</c> = subcapítulo não pedido.
+/// <c>Teams</c>, <c>UsersByTeam</c>, <c>ProjectUsers</c>, <c>WorkItems</c> e <c>Repositories</c> <c>null</c> = subcapítulo não pedido.
 /// </summary>
 public record ProjectChapter(
     string Number,
@@ -30,7 +30,20 @@ public record ProjectChapter(
     Chapter<IReadOnlyList<TeamRow>>? Teams,
     Chapter<IReadOnlyList<TeamUsers>>? UsersByTeam,
     Chapter<IReadOnlyList<ProjectUserRow>>? ProjectUsers,
-    Chapter<WorkItemSummary>? WorkItems);
+    Chapter<WorkItemSummary>? WorkItems,
+    Chapter<IReadOnlyList<RepositoryRow>>? Repositories);
+
+/// <summary>
+/// Linha de repositório. <c>Creator</c> = autor do primeiro commit do branch padrão;
+/// as colunas de commit ficam <c>null</c> em repositório vazio ou desativado (spec 018).
+/// </summary>
+public record RepositoryRow(
+    string Name,
+    string? Creator,
+    DateTime? LastCommitDate,
+    string? LastCommitAuthor,
+    bool IsEmpty,
+    bool IsDisabled);
 
 /// <summary>Tabela de contagem (abertos/fechados) com a linha Total; <c>Header</c> nomeia a primeira coluna.</summary>
 public record CountTable(string Header, IReadOnlyList<CountRow> Rows, long Open, long Closed);

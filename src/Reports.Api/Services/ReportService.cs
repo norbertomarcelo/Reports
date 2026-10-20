@@ -77,6 +77,23 @@ public class ReportService
                     WorkItemCounter.Summarize(await _azureDevOps.GetWorkItemGroupsAsync(project.Name));
         }
 
+        // Repositórios: uma listagem da organização; commits (mais recente e mais antigo) um repositório por vez,
+        // só para os que têm branch padrão e não estão desativados (spec 018, RF-06).
+        var repositoriesByProject = new Dictionary<string, List<RepositoryRow>>();
+        if (sections.Repositories)
+        {
+            foreach (var repository in await _azureDevOps.GetAllRepositoriesAsync())
+            {
+                var projectId = repository.Project?.Id;
+                if (projectId is null)
+                    continue;
+
+                if (!repositoriesByProject.TryGetValue(projectId, out var rows))
+                    repositoriesByProject[projectId] = rows = [];
+                rows.Add(await ToRepositoryRowAsync(projectId, repository));
+            }
+        }
+
         var orderedProjects = projects.OrderBy(p => p.Name, Comparer).ToList();
         var outline = ReportOutline.Build(sections,
             orderedProjects.Select(p => teamsByProject.GetValueOrDefault(p.Id)?.Count ?? 0).ToList());
@@ -113,7 +130,12 @@ public class ReportService
                         ProjectUsers(teams, members)),
                 numbers.WorkItems is null
                     ? null
-                    : new Chapter<WorkItemSummary>(numbers.WorkItems, summaryByProject[project.Id])));
+                    : new Chapter<WorkItemSummary>(numbers.WorkItems, summaryByProject[project.Id]),
+                numbers.Repositories is null
+                    ? null
+                    : new Chapter<IReadOnlyList<RepositoryRow>>(numbers.Repositories,
+                        (repositoriesByProject.GetValueOrDefault(project.Id) ?? [])
+                            .OrderBy(r => r.Name, Comparer).ToList())));
         }
 
         return new ReportViewModel
@@ -132,6 +154,23 @@ public class ReportService
             ProjectChapters = chapters,
             NoProjects = !sections.Projects && projects.Count == 0
         };
+    }
+
+    private async Task<RepositoryRow> ToRepositoryRowAsync(string projectId, GitRepository repository)
+    {
+        var isEmpty = string.IsNullOrEmpty(repository.DefaultBranch);
+        if (isEmpty || repository.IsDisabled)
+            return new RepositoryRow(repository.Name, null, null, null, isEmpty, repository.IsDisabled);
+
+        var latest = await _azureDevOps.GetLatestCommitAsync(projectId, repository.Id);
+        var first = await _azureDevOps.GetFirstCommitAsync(projectId, repository.Id);
+        return new RepositoryRow(
+            repository.Name,
+            first?.Author?.Name,
+            latest?.Committer?.Date,
+            latest?.Author?.Name,
+            false,
+            false);
     }
 
     /// <summary>Membro com a linha do relatório e a chave da identidade (para consolidar o projeto).</summary>

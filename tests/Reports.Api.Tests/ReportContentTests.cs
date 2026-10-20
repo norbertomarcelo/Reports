@@ -712,6 +712,185 @@ public class ReportContentTests
         Assert.Null(pdf.Html);
     }
 
+    // Spec 018: repositórios.
+
+    private static GitRepository Repo(string projectId, string id, string name, bool empty = false, bool disabled = false) =>
+        new()
+        {
+            Id = id,
+            Name = name,
+            DefaultBranch = empty ? null : "refs/heads/main",
+            IsDisabled = disabled,
+            Project = new GitRepositoryProject { Id = projectId }
+        };
+
+    private static GitCommit Commit(string author, DateTime? date = null) =>
+        new()
+        {
+            CommitId = Guid.NewGuid().ToString(),
+            Author = new GitUserDate { Name = author },
+            Committer = new GitUserDate { Name = author, Date = date ?? default }
+        };
+
+    /// <summary>Alfa com <c>api</c>: primeiro commit de Ana; último de Bruno em 15/09/2026 14:30.</summary>
+    private static FakeAzureDevOpsApi AlfaComRepositorioApi()
+    {
+        var api = ProjetoAlfa();
+        api.Repositories = [Repo("pa", "r1", "api")];
+        api.CommitsByRepository["r1"] =
+        [
+            Commit("Bruno", new DateTime(2026, 9, 15, 14, 30, 0)),
+            Commit("Carla"),
+            Commit("Ana")
+        ];
+        return api;
+    }
+
+    [Fact]
+    public async Task Sem_a_flag_nao_ha_chamadas_de_repositorios_nem_de_commits()
+    {
+        var api = AlfaComRepositorioApi();
+
+        var (html, _) = await GerarAsync(api,
+            """ "projects": true, "teams": true, "users": true, "workItems": true """);
+
+        Assert.DoesNotContain(api.Calls, c => c.StartsWith("repositories ") || c.StartsWith("commits "));
+        Assert.DoesNotContain("Repositórios", html);
+    }
+
+    [Fact]
+    public async Task Faz_uma_listagem_e_duas_chamadas_de_commits_por_repositorio_na_ordem_da_listagem()
+    {
+        var api = ProjetoAlfa();
+        api.Repositories = [Repo("pa", "r-web", "web"), Repo("pa", "r-api", "api")];
+        api.CommitsByRepository["r-web"] = [Commit("A"), Commit("B")];
+        api.CommitsByRepository["r-api"] = [Commit("C"), Commit("D")];
+
+        await GerarAsync(api, """ "repositories": true """);
+
+        var v = ApiFactory.ApiVersion;
+        var o = ApiFactory.Organization;
+        Assert.Equal(
+            [
+                $"projects {o} {v}",
+                $"repositories {o} {v}",
+                $"commits {o} pa r-web 1 - {v}",
+                $"commits {o} pa r-web 1 true {v}",
+                $"commits {o} pa r-api 1 - {v}",
+                $"commits {o} pa r-api 1 true {v}"
+            ],
+            api.Calls);
+    }
+
+    [Fact]
+    public async Task Repositorio_vazio_ou_desativado_nao_gera_chamada_de_commits()
+    {
+        var api = ProjetoAlfa();
+        api.Repositories = [Repo("pa", "r1", "vazio", empty: true), Repo("pa", "r2", "velho", disabled: true)];
+
+        await GerarAsync(api, """ "repositories": true """);
+
+        Assert.DoesNotContain(api.Calls, c => c.StartsWith("commits "));
+    }
+
+    [Fact]
+    public async Task Mostra_criador_ultimo_commit_e_autor_na_linha_do_repositorio()
+    {
+        var (html, _) = await GerarAsync(AlfaComRepositorioApi(), """ "repositories": true """);
+
+        var trecho = Trecho(html, "1.1 Repositórios");
+        Assert.Equal(["Repositório", "Criador", "Último commit", "Autor do último commit"], Cabecalhos(trecho));
+        Assert.Equal([["api", "Ana", "15/09/2026 14:30", "Bruno"]], Linhas(trecho));
+        Assert.Contains("Criador: autor do primeiro commit do branch padrão.", trecho);
+    }
+
+    [Fact]
+    public async Task Repositorios_sao_ordenados_por_nome_sem_diferenciar_maiusculas()
+    {
+        var api = ProjetoAlfa();
+        api.Repositories = [Repo("pa", "1", "web", empty: true), Repo("pa", "2", "Api", empty: true), Repo("pa", "3", "banco", empty: true)];
+
+        var (html, _) = await GerarAsync(api, """ "repositories": true """);
+
+        Assert.Equal(["Api", "banco", "web"], Linhas(Trecho(html, "1.1 Repositórios")).Select(l => l[0].Split(' ')[0]));
+    }
+
+    [Fact]
+    public async Task Repositorio_vazio_ou_desativado_recebe_a_marca_e_traco_nas_demais_colunas()
+    {
+        var api = ProjetoAlfa();
+        api.Repositories = [Repo("pa", "1", "vazio", empty: true), Repo("pa", "2", "velho", disabled: true)];
+
+        var (html, _) = await GerarAsync(api, """ "repositories": true """);
+
+        Assert.Equal(
+            [["vazio Vazio", "—", "—", "—"], ["velho Desativado", "—", "—", "—"]],
+            Linhas(Trecho(html, "1.1 Repositórios")));
+    }
+
+    [Fact]
+    public async Task Projeto_sem_repositorios_mostra_a_mensagem_de_vazio()
+    {
+        var (html, _) = await GerarAsync(ProjetoAlfa(), """ "repositories": true """);
+
+        var trecho = Trecho(html, "1.1 Repositórios");
+        Assert.Contains("Nenhum repositório encontrado.", trecho);
+        Assert.DoesNotContain("<table", trecho);
+    }
+
+    [Fact]
+    public async Task Cada_repositorio_aparece_so_no_capitulo_do_seu_projeto()
+    {
+        var api = ApiComDoisProjetos();
+        var alfa = api.Projects!.Single(p => p.Name == "Alfa").Id;
+        var beta = api.Projects!.Single(p => p.Name == "Beta").Id;
+        api.Repositories = [Repo(beta, "r1", "repo-beta", empty: true), Repo(alfa, "r2", "repo-alfa", empty: true)];
+
+        var (html, _) = await GerarAsync(api, """ "repositories": true """);
+
+        var capituloAlfa = Trecho(html, "1. Alfa", "2. Beta");
+        var capituloBeta = Trecho(html, "2. Beta");
+        Assert.Contains("repo-alfa", capituloAlfa);
+        Assert.DoesNotContain("repo-beta", capituloAlfa);
+        Assert.Contains("repo-beta", capituloBeta);
+        Assert.DoesNotContain("repo-alfa", capituloBeta);
+    }
+
+    [Fact]
+    public async Task Numeracao_dos_repositorios_so_e_com_todas_as_flags()
+    {
+        var (soRepositorios, _) = await GerarAsync(AlfaComRepositorioApi(), """ "repositories": true """);
+        Assert.Equal([(1, "1. Alfa"), (2, "1.1 Repositórios")], Titulos(soRepositorios));
+
+        var api = AlfaComRepositorioApi();
+        var pdf = new FakePdfRenderer();
+        using var factory = ReportHost.Create(api, pdf, AnalyticsDeAlfa());
+        var response = await factory.CreateClient().PostAsync(ReportHost.Route, ReportHost.Json(
+            """{ "include": { "projects": true, "teams": true, "users": true, "workItems": true, "repositories": true } }"""));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var titulos = Titulos(WebUtility.HtmlDecode(pdf.Html!));
+        Assert.Equal((2, "3.5 Repositórios"), titulos[^1]);
+        Assert.Equal((2, "3.4 Itens de trabalho"), titulos[^2]);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Falha_na_listagem_ou_nos_commits_interrompe_o_relatorio_sem_gerar_pdf(bool naListagem)
+    {
+        var api = AlfaComRepositorioApi();
+        var erro = new InvalidOperationException("falha simulada");
+        if (naListagem) api.RepositoriesError = erro; else api.CommitsError = erro;
+        var pdf = new FakePdfRenderer();
+        using var factory = ReportHost.Create(api, pdf);
+
+        var response = await factory.CreateClient().PostAsync(ReportHost.Route,
+            ReportHost.Json("""{ "include": { "repositories": true } }"""));
+
+        Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(pdf.Html);
+    }
+
     private static string[] Celulas(string linha) =>
         System.Text.RegularExpressions.Regex.Matches(linha, "<td[^>]*>(.*?)</td>", System.Text.RegularExpressions.RegexOptions.Singleline)
             .Select(m => System.Text.RegularExpressions.Regex.Replace(
