@@ -12,7 +12,7 @@ public class ReportRequestValidationTests
         "{}",
         """{ "include": null }""",
         """{ "include": {} }""",
-        """{ "include": { "projects": false, "teams": false, "users": false, "workItems": false } }""",
+        """{ "include": { "projects": false, "teams": false, "users": false, "workItems": false, "repositories": false } }""",
         """{ "include": { "projects": "sim" } }""",
         """{ "include": { "projects": 1 } }""",
         """{ "include": { "projects": null } }""",
@@ -76,6 +76,19 @@ public class ReportRequestValidationTests
 
         var response = await factory.CreateClient().PostAsync(ReportHost.Route,
             ReportHost.Json("""{ "include": { "workItems": true } }"""));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(pdf.Html);
+    }
+
+    [Fact]
+    public async Task So_repositorios_e_uma_secao_valida()
+    {
+        var pdf = new FakePdfRenderer();
+        using var factory = ReportHost.Create(new FakeAzureDevOpsApi(), pdf);
+
+        var response = await factory.CreateClient().PostAsync(ReportHost.Route,
+            ReportHost.Json("""{ "include": { "repositories": true } }"""));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(pdf.Html);
