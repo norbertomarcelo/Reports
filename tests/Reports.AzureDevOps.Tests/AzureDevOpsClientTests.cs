@@ -1,11 +1,11 @@
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
-using Reports.Api.Interfaces;
-using Reports.Api.Services;
-using Reports.Api.Settings;
+using Reports.AzureDevOps.Interfaces;
+using Reports.AzureDevOps.Services;
+using Reports.AzureDevOps.Settings;
 
-namespace Reports.Api.Tests;
+namespace Reports.AzureDevOps.Tests;
 
 public class AzureDevOpsClientTests
 {
@@ -18,23 +18,23 @@ public class AzureDevOpsClientTests
         var services = new ServiceCollection();
         services.AddOptions<AzureDevOpsOptions>().Configure(o =>
         {
-            o.CoreServer = ApiFactory.CoreServer;
-            o.Organization = ApiFactory.Organization;
-            o.ApiVersion = ApiFactory.ApiVersion;
-            o.AccessToken = ApiFactory.AccessToken;
+            o.CoreServer = TestSettings.CoreServer;
+            o.Organization = TestSettings.Organization;
+            o.ApiVersion = TestSettings.ApiVersion;
+            o.AccessToken = TestSettings.AccessToken;
         });
         services.AddAzureDevOpsClient().ConfigurePrimaryHttpMessageHandler(() => handler);
 
         var api = services.BuildServiceProvider().GetRequiredService<IAzureDevOpsApi>();
-        var response = await api.GetTeamMembersAsync(ApiFactory.Organization, "p1", "t1", ApiFactory.ApiVersion);
+        var response = await api.GetTeamMembersAsync(TestSettings.Organization, "p1", "t1", TestSettings.ApiVersion);
 
         var request = Assert.IsType<HttpRequestMessage>(handler.Request);
         Assert.Equal(
-            $"{ApiFactory.CoreServer}/{ApiFactory.Organization}/_apis/projects/p1/teams/t1/members?api-version={ApiFactory.ApiVersion}",
+            $"{TestSettings.CoreServer}/{TestSettings.Organization}/_apis/projects/p1/teams/t1/members?api-version={TestSettings.ApiVersion}",
             request.RequestUri!.ToString());
         Assert.Equal("Basic", request.Headers.Authorization!.Scheme);
         Assert.Equal(
-            Convert.ToBase64String(Encoding.ASCII.GetBytes($":{ApiFactory.AccessToken}")),
+            Convert.ToBase64String(Encoding.ASCII.GetBytes($":{TestSettings.AccessToken}")),
             request.Headers.Authorization.Parameter);
 
         var member = Assert.Single(response.Value);
@@ -61,20 +61,20 @@ public class AzureDevOpsClientTests
         var services = new ServiceCollection();
         services.AddOptions<AzureDevOpsOptions>().Configure(o =>
         {
-            o.CoreServer = ApiFactory.CoreServer;
-            o.Organization = ApiFactory.Organization;
-            o.ApiVersion = ApiFactory.ApiVersion;
-            o.AccessToken = ApiFactory.AccessToken;
+            o.CoreServer = TestSettings.CoreServer;
+            o.Organization = TestSettings.Organization;
+            o.ApiVersion = TestSettings.ApiVersion;
+            o.AccessToken = TestSettings.AccessToken;
         });
         services.AddAzureDevOpsClient().ConfigurePrimaryHttpMessageHandler(() => handler);
 
         var api = services.BuildServiceProvider().GetRequiredService<IAzureDevOpsApi>();
         var response = await api.GetProjectPropertiesAsync(
-            ApiFactory.Organization, "p1", ApiFactory.ProjectPropertiesApiVersion);
+            TestSettings.Organization, "p1", TestSettings.ProjectPropertiesApiVersion);
 
         var request = Assert.IsType<HttpRequestMessage>(handler.Request);
         Assert.Equal(
-            $"{ApiFactory.CoreServer}/{ApiFactory.Organization}/_apis/projects/p1/properties?api-version={ApiFactory.ProjectPropertiesApiVersion}",
+            $"{TestSettings.CoreServer}/{TestSettings.Organization}/_apis/projects/p1/properties?api-version={TestSettings.ProjectPropertiesApiVersion}",
             request.RequestUri!.ToString());
         Assert.Equal("Basic", request.Headers.Authorization!.Scheme);
 
@@ -97,29 +97,29 @@ public class AzureDevOpsClientTests
         var services = new ServiceCollection();
         services.AddOptions<AzureDevOpsOptions>().Configure(o =>
         {
-            o.CoreServer = ApiFactory.CoreServer;
-            o.AnalyticsServer = ApiFactory.AnalyticsServer;
-            o.Organization = ApiFactory.Organization;
-            o.AccessToken = ApiFactory.AccessToken;
+            o.CoreServer = TestSettings.CoreServer;
+            o.AnalyticsServer = TestSettings.AnalyticsServer;
+            o.Organization = TestSettings.Organization;
+            o.AccessToken = TestSettings.AccessToken;
         });
         services.AddAzureDevOpsClient();
         services.ConfigureHttpClientDefaults(builder => builder.ConfigurePrimaryHttpMessageHandler(() => handler));
 
         var api = services.BuildServiceProvider().GetRequiredService<IAzureDevOpsAnalyticsApi>();
         var response = await api.GetWorkItemGroupsAsync(
-            ApiFactory.Organization, "Projeto Alfa", AzureDevOpsService.WorkItemGroupsQuery);
+            TestSettings.Organization, "Projeto Alfa", AzureDevOpsService.WorkItemGroupsQuery);
 
         var request = Assert.IsType<HttpRequestMessage>(handler.Request);
         Assert.Equal(HttpMethod.Get, request.Method);
-        Assert.Equal(ApiFactory.AnalyticsServer, $"{request.RequestUri!.Scheme}://{request.RequestUri.Host}");
+        Assert.Equal(TestSettings.AnalyticsServer, $"{request.RequestUri!.Scheme}://{request.RequestUri.Host}");
         Assert.Equal(
-            $"/{ApiFactory.Organization}/Projeto%20Alfa/_odata/v4.0-preview/WorkItems",
+            $"/{TestSettings.Organization}/Projeto%20Alfa/_odata/v4.0-preview/WorkItems",
             request.RequestUri.AbsolutePath);
         Assert.Equal(AzureDevOpsService.WorkItemGroupsQuery,
             System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query)["$apply"]);
         Assert.Equal("Basic", request.Headers.Authorization!.Scheme);
         Assert.Equal(
-            Convert.ToBase64String(Encoding.ASCII.GetBytes($":{ApiFactory.AccessToken}")),
+            Convert.ToBase64String(Encoding.ASCII.GetBytes($":{TestSettings.AccessToken}")),
             request.Headers.Authorization.Parameter);
 
         Assert.Equal(2, response.Value.Count);
@@ -140,12 +140,12 @@ public class AzureDevOpsClientTests
             """);
         var api = BuildApi(handler);
 
-        var response = await api.GetRepositoriesAsync(ApiFactory.Organization, ApiFactory.ApiVersion);
+        var response = await api.GetRepositoriesAsync(TestSettings.Organization, TestSettings.ApiVersion);
 
         var request = Assert.IsType<HttpRequestMessage>(handler.Request);
-        Assert.Equal(ApiFactory.CoreServer, $"{request.RequestUri!.Scheme}://{request.RequestUri.Host}");
-        Assert.Equal($"/{ApiFactory.Organization}/_apis/git/repositories", request.RequestUri.AbsolutePath);
-        Assert.Equal(ApiFactory.ApiVersion,
+        Assert.Equal(TestSettings.CoreServer, $"{request.RequestUri!.Scheme}://{request.RequestUri.Host}");
+        Assert.Equal($"/{TestSettings.Organization}/_apis/git/repositories", request.RequestUri.AbsolutePath);
+        Assert.Equal(TestSettings.ApiVersion,
             System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query)["api-version"]);
         Assert.Equal("Basic", request.Headers.Authorization!.Scheme);
 
@@ -169,14 +169,14 @@ public class AzureDevOpsClientTests
         var api = BuildApi(handler);
 
         var response = await api.GetCommitsAsync(
-            ApiFactory.Organization, "p1", "r1", 1, oldestFirst, ApiFactory.ApiVersion);
+            TestSettings.Organization, "p1", "r1", 1, oldestFirst, TestSettings.ApiVersion);
 
         var request = Assert.IsType<HttpRequestMessage>(handler.Request);
-        Assert.Equal($"/{ApiFactory.Organization}/p1/_apis/git/repositories/r1/commits", request.RequestUri!.AbsolutePath);
+        Assert.Equal($"/{TestSettings.Organization}/p1/_apis/git/repositories/r1/commits", request.RequestUri!.AbsolutePath);
         var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query);
         Assert.Equal("1", query["searchCriteria.$top"]);
         Assert.Equal(esperado, query["searchCriteria.showOldestCommitsFirst"]);
-        Assert.Equal(ApiFactory.ApiVersion, query["api-version"]);
+        Assert.Equal(TestSettings.ApiVersion, query["api-version"]);
         Assert.Equal("Basic", request.Headers.Authorization!.Scheme);
 
         var commit = Assert.Single(response.Value);
@@ -189,10 +189,10 @@ public class AzureDevOpsClientTests
         var services = new ServiceCollection();
         services.AddOptions<AzureDevOpsOptions>().Configure(o =>
         {
-            o.CoreServer = ApiFactory.CoreServer;
-            o.AnalyticsServer = ApiFactory.AnalyticsServer;
-            o.Organization = ApiFactory.Organization;
-            o.AccessToken = ApiFactory.AccessToken;
+            o.CoreServer = TestSettings.CoreServer;
+            o.AnalyticsServer = TestSettings.AnalyticsServer;
+            o.Organization = TestSettings.Organization;
+            o.AccessToken = TestSettings.AccessToken;
         });
         services.AddAzureDevOpsClient();
         services.ConfigureHttpClientDefaults(builder => builder.ConfigurePrimaryHttpMessageHandler(() => handler));

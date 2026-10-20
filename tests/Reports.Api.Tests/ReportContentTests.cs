@@ -1,7 +1,8 @@
 using System.Net;
 using System.Text.Json;
-using Reports.Api.Models;
-using Reports.Api.Services;
+using Reports.AzureDevOps.Models;
+using Reports.AzureDevOps.Services;
+using Reports.AzureDevOps.Tests.Fakes;
 using Reports.Api.Tests.Fakes;
 
 namespace Reports.Api.Tests;

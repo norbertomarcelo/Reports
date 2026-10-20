@@ -1,7 +1,7 @@
-using Reports.Api.Dtos.Requests;
-using Reports.Api.Services;
+using Reports.AzureDevOps.Dtos.Requests;
+using Reports.AzureDevOps.Services;
 
-namespace Reports.Api.Tests;
+namespace Reports.AzureDevOps.Tests;
 
 public class ReportOutlineTests
 {

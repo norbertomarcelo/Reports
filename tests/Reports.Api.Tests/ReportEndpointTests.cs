@@ -1,5 +1,6 @@
 using System.Net;
-using Reports.Api.Models;
+using Reports.AzureDevOps.Models;
+using Reports.AzureDevOps.Tests.Fakes;
 using Reports.Api.Tests.Fakes;
 
 namespace Reports.Api.Tests;

@@ -1,6 +1,6 @@
-using Reports.Api.Services;
+using Reports.AzureDevOps.Services;
 
-namespace Reports.Api.Tests;
+namespace Reports.AzureDevOps.Tests;
 
 public class MemberClassifierTests
 {

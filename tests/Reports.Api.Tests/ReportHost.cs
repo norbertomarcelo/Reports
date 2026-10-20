@@ -3,8 +3,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Reports.Api.Interfaces;
+using Reports.AzureDevOps.Interfaces;
 using Reports.Api.Services.Pdf;
+using Reports.AzureDevOps.Tests.Fakes;
 using Reports.Api.Tests.Fakes;
 
 namespace Reports.Api.Tests;

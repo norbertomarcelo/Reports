@@ -1,8 +1,8 @@
 using System.Text.Json;
-using Reports.Api.Models;
-using Reports.Api.Services;
+using Reports.AzureDevOps.Models;
+using Reports.AzureDevOps.Services;
 
-namespace Reports.Api.Tests;
+namespace Reports.AzureDevOps.Tests;
 
 public class ProjectPropertiesReaderTests
 {

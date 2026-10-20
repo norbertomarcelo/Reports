@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Reports.Api\Reports.Api.csproj" />
+    <ProjectReference Include="..\Reports.AzureDevOps.Tests\Reports.AzureDevOps.Tests.csproj" />
   </ItemGroup>
 
 </Project>

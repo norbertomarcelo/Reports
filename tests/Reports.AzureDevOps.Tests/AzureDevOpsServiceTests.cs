@@ -1,12 +1,12 @@
 using System.Net;
 using Microsoft.Extensions.Options;
 using Refit;
-using Reports.Api.Models;
-using Reports.Api.Services;
-using Reports.Api.Settings;
-using Reports.Api.Tests.Fakes;
+using Reports.AzureDevOps.Models;
+using Reports.AzureDevOps.Services;
+using Reports.AzureDevOps.Settings;
+using Reports.AzureDevOps.Tests.Fakes;
 
-namespace Reports.Api.Tests;
+namespace Reports.AzureDevOps.Tests;
 
 public class AzureDevOpsServiceTests
 {
@@ -18,11 +18,11 @@ public class AzureDevOpsServiceTests
     {
         var options = Options.Create(new AzureDevOpsOptions
         {
-            CoreServer = ApiFactory.CoreServer,
-            Organization = ApiFactory.Organization,
-            ApiVersion = ApiFactory.ApiVersion,
-            ProjectPropertiesApiVersion = ApiFactory.ProjectPropertiesApiVersion,
-            AccessToken = ApiFactory.AccessToken
+            CoreServer = TestSettings.CoreServer,
+            Organization = TestSettings.Organization,
+            ApiVersion = TestSettings.ApiVersion,
+            ProjectPropertiesApiVersion = TestSettings.ProjectPropertiesApiVersion,
+            AccessToken = TestSettings.AccessToken
         });
         _service = new AzureDevOpsService(_api, _analytics, options);
     }
@@ -35,7 +35,7 @@ public class AzureDevOpsServiceTests
         var result = await _service.GetAllProjectsAsync();
 
         Assert.Equal("Alfa", Assert.Single(result).Name);
-        Assert.Equal($"projects {ApiFactory.Organization} {ApiFactory.ApiVersion}", Assert.Single(_api.Calls));
+        Assert.Equal($"projects {TestSettings.Organization} {TestSettings.ApiVersion}", Assert.Single(_api.Calls));
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class AzureDevOpsServiceTests
         var result = await _service.GetTeamsPerProjectAsync("p1");
 
         Assert.Equal("Time A", Assert.Single(result).Name);
-        Assert.Equal($"teams {ApiFactory.Organization} p1 {ApiFactory.ApiVersion}", Assert.Single(_api.Calls));
+        Assert.Equal($"teams {TestSettings.Organization} p1 {TestSettings.ApiVersion}", Assert.Single(_api.Calls));
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class AzureDevOpsServiceTests
         var result = await _service.GetTeamMembersAsync("p1", "t1");
 
         Assert.True(Assert.Single(result).IsTeamAdmin);
-        Assert.Equal($"members {ApiFactory.Organization} p1 t1 {ApiFactory.ApiVersion}", Assert.Single(_api.Calls));
+        Assert.Equal($"members {TestSettings.Organization} p1 t1 {TestSettings.ApiVersion}", Assert.Single(_api.Calls));
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class AzureDevOpsServiceTests
 
         Assert.Equal("System.Process Template", Assert.Single(result).Name);
         Assert.Equal(
-            $"properties {ApiFactory.Organization} p1 {ApiFactory.ProjectPropertiesApiVersion}",
+            $"properties {TestSettings.Organization} p1 {TestSettings.ProjectPropertiesApiVersion}",
             Assert.Single(_api.Calls));
     }
 
@@ -107,7 +107,7 @@ public class AzureDevOpsServiceTests
         Assert.Equal(("Bug", "Completed", 3), (group.WorkItemType, group.StateCategory, group.Count));
         Assert.False(result.Partial);
         Assert.Equal(
-            $"analytics {ApiFactory.Organization} Projeto Alfa {AzureDevOpsService.WorkItemGroupsQuery}",
+            $"analytics {TestSettings.Organization} Projeto Alfa {AzureDevOpsService.WorkItemGroupsQuery}",
             Assert.Single(_analytics.Calls));
         Assert.Empty(_api.Calls);
     }
@@ -143,7 +143,7 @@ public class AzureDevOpsServiceTests
         var result = await _service.GetAllRepositoriesAsync();
 
         Assert.Equal("api", Assert.Single(result).Name);
-        Assert.Equal($"repositories {ApiFactory.Organization} {ApiFactory.ApiVersion}", Assert.Single(_api.Calls));
+        Assert.Equal($"repositories {TestSettings.Organization} {TestSettings.ApiVersion}", Assert.Single(_api.Calls));
     }
 
     [Fact]
@@ -160,8 +160,8 @@ public class AzureDevOpsServiceTests
         Assert.Equal("antigo", (await _service.GetFirstCommitAsync("p1", "r1"))!.CommitId);
         Assert.Equal(
             [
-                $"commits {ApiFactory.Organization} p1 r1 1 - {ApiFactory.ApiVersion}",
-                $"commits {ApiFactory.Organization} p1 r1 1 true {ApiFactory.ApiVersion}"
+                $"commits {TestSettings.Organization} p1 r1 1 - {TestSettings.ApiVersion}",
+                $"commits {TestSettings.Organization} p1 r1 1 true {TestSettings.ApiVersion}"
             ],
             _api.Calls);
     }

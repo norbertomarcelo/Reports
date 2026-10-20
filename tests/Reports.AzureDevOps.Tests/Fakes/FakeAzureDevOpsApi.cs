@@ -1,8 +1,8 @@
-using Reports.Api.Dtos.Responses;
-using Reports.Api.Interfaces;
-using Reports.Api.Models;
+using Reports.AzureDevOps.Dtos.Responses;
+using Reports.AzureDevOps.Interfaces;
+using Reports.AzureDevOps.Models;
 
-namespace Reports.Api.Tests.Fakes;
+namespace Reports.AzureDevOps.Tests.Fakes;
 
 public class FakeAzureDevOpsApi : IAzureDevOpsApi
 {
