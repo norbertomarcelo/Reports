@@ -11,6 +11,7 @@ namespace Reports.Api.Tests;
 public class AzureDevOpsServiceTests
 {
     private readonly FakeAzureDevOpsApi _api = new();
+    private readonly FakeAzureDevOpsAnalyticsApi _analytics = new();
     private readonly AzureDevOpsService _service;
 
     public AzureDevOpsServiceTests()
@@ -23,7 +24,7 @@ public class AzureDevOpsServiceTests
             ProjectPropertiesApiVersion = ApiFactory.ProjectPropertiesApiVersion,
             AccessToken = ApiFactory.AccessToken
         });
-        _service = new AzureDevOpsService(_api, options);
+        _service = new AzureDevOpsService(_api, _analytics, options);
     }
 
     [Fact]
@@ -92,6 +93,46 @@ public class AzureDevOpsServiceTests
         Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
         Assert.StartsWith("Erro ao obter propriedades do projeto", ex.Message);
         Assert.Contains("404", ex.Message);
+    }
+
+    [Fact]
+    public async Task Conta_itens_de_trabalho_em_uma_unica_chamada_ao_analytics_pelo_nome_do_projeto()
+    {
+        _analytics.GroupsByProject["Projeto Alfa"] =
+            [new WorkItemGroup { WorkItemType = "Bug", StateCategory = "Completed", Count = 3 }];
+
+        var result = await _service.GetWorkItemGroupsAsync("Projeto Alfa");
+
+        var group = Assert.Single(result.Groups);
+        Assert.Equal(("Bug", "Completed", 3), (group.WorkItemType, group.StateCategory, group.Count));
+        Assert.False(result.Partial);
+        Assert.Equal(
+            $"analytics {ApiFactory.Organization} Projeto Alfa {AzureDevOpsService.WorkItemGroupsQuery}",
+            Assert.Single(_analytics.Calls));
+        Assert.Empty(_api.Calls);
+    }
+
+    [Fact]
+    public async Task Contagem_de_itens_e_parcial_quando_o_analytics_indica_outra_pagina()
+    {
+        _analytics.ProjectsWithNextPage.Add("Alfa");
+
+        Assert.True((await _service.GetWorkItemGroupsAsync("Alfa")).Partial);
+        Assert.False((await _service.GetWorkItemGroupsAsync("Beta")).Partial);
+    }
+
+    [Fact]
+    public async Task Erro_http_na_contagem_de_itens_vira_AzureDevOpsException_em_portugues()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "https://analytics.example/");
+        using var response = new HttpResponseMessage(HttpStatusCode.Unauthorized) { RequestMessage = request };
+        _analytics.Error = await ApiException.Create(request, HttpMethod.Get, response, new RefitSettings());
+
+        var ex = await Assert.ThrowsAsync<AzureDevOpsException>(() => _service.GetWorkItemGroupsAsync("Alfa"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
+        Assert.StartsWith("Erro ao obter contagem de itens de trabalho", ex.Message);
+        Assert.Contains("401", ex.Message);
     }
 
     [Fact]

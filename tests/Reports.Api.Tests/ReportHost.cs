@@ -14,9 +14,14 @@ public static class ReportHost
 {
     public const string Route = "/azure-devops";
 
-    /// <param name="internalDomains">Valor de <c>AzureDevOps:InternalDomains</c>; vazio = chave ausente.</param>
     public static WebApplicationFactory<Program> Create(
         FakeAzureDevOpsApi api, FakePdfRenderer pdf, params string[] internalDomains) =>
+        Create(api, pdf, new FakeAzureDevOpsAnalyticsApi(), internalDomains);
+
+    /// <param name="internalDomains">Valor de <c>AzureDevOps:InternalDomains</c>; vazio = chave ausente.</param>
+    public static WebApplicationFactory<Program> Create(
+        FakeAzureDevOpsApi api, FakePdfRenderer pdf, FakeAzureDevOpsAnalyticsApi analytics,
+        params string[] internalDomains) =>
         new ApiFactory().WithWebHostBuilder(builder =>
         {
             builder.ConfigureAppConfiguration((_, config) =>
@@ -25,6 +30,7 @@ public static class ReportHost
             builder.ConfigureTestServices(services =>
             {
                 services.AddSingleton<IAzureDevOpsApi>(api);
+                services.AddSingleton<IAzureDevOpsAnalyticsApi>(analytics);
                 services.AddSingleton<IPdfRenderer>(pdf);
             });
         });

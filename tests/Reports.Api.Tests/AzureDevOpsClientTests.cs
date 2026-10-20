@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Reports.Api.Interfaces;
+using Reports.Api.Services;
 using Reports.Api.Settings;
 
 namespace Reports.Api.Tests;
@@ -81,6 +82,61 @@ public class AzureDevOpsClientTests
         Assert.Equal("Agile", response.Value[3].Value.GetString());
         Assert.Equal(2, response.Value[5].Value.GetInt32());
         Assert.True(response.Value[6].Value.GetBoolean());
+    }
+
+    [Fact]
+    public async Task Conta_itens_no_analytics_com_host_rota_apply_e_autenticacao_basic()
+    {
+        var handler = new CapturingHandler("""
+            {"@odata.context":"https://analytics.example/$metadata","value":[
+              {"WorkItemType":"Bug","StateCategory":"InProgress","Area":{"AreaPath":"Alfa\\Backend"},"Count":2},
+              {"WorkItemType":"Task","StateCategory":"Proposed","Area":null,"Count":5}
+            ],"@odata.nextLink":"https://analytics.example/proxima"}
+            """);
+
+        var services = new ServiceCollection();
+        services.AddOptions<AzureDevOpsOptions>().Configure(o =>
+        {
+            o.CoreServer = ApiFactory.CoreServer;
+            o.AnalyticsServer = ApiFactory.AnalyticsServer;
+            o.Organization = ApiFactory.Organization;
+            o.AccessToken = ApiFactory.AccessToken;
+        });
+        services.AddAzureDevOpsClient();
+        services.ConfigureHttpClientDefaults(builder => builder.ConfigurePrimaryHttpMessageHandler(() => handler));
+
+        var api = services.BuildServiceProvider().GetRequiredService<IAzureDevOpsAnalyticsApi>();
+        var response = await api.GetWorkItemGroupsAsync(
+            ApiFactory.Organization, "Projeto Alfa", AzureDevOpsService.WorkItemGroupsQuery);
+
+        var request = Assert.IsType<HttpRequestMessage>(handler.Request);
+        Assert.Equal(HttpMethod.Get, request.Method);
+        Assert.Equal(ApiFactory.AnalyticsServer, $"{request.RequestUri!.Scheme}://{request.RequestUri.Host}");
+        Assert.Equal(
+            $"/{ApiFactory.Organization}/Projeto%20Alfa/_odata/v4.0-preview/WorkItems",
+            request.RequestUri.AbsolutePath);
+        Assert.Equal(AzureDevOpsService.WorkItemGroupsQuery,
+            System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query)["$apply"]);
+        Assert.Equal("Basic", request.Headers.Authorization!.Scheme);
+        Assert.Equal(
+            Convert.ToBase64String(Encoding.ASCII.GetBytes($":{ApiFactory.AccessToken}")),
+            request.Headers.Authorization.Parameter);
+
+        Assert.Equal(2, response.Value.Count);
+        Assert.Equal(("Bug", "InProgress", "Alfa\\Backend", 2), (response.Value[0].WorkItemType,
+            response.Value[0].StateCategory, response.Value[0].Area!.AreaPath, response.Value[0].Count));
+        Assert.Null(response.Value[1].Area);
+        Assert.Equal("https://analytics.example/proxima", response.NextLink);
+    }
+
+    [Fact]
+    public void A_consulta_conta_no_servidor_sem_os_removidos_agrupando_por_tipo_categoria_e_area()
+    {
+        var query = AzureDevOpsService.WorkItemGroupsQuery;
+
+        Assert.Contains("StateCategory ne 'Removed'", query);
+        Assert.Contains("groupby((WorkItemType,StateCategory,Area/AreaPath)", query);
+        Assert.Contains("aggregate($count as Count)", query);
     }
 
     private class CapturingHandler(string body) : HttpMessageHandler
