@@ -1,0 +1,57 @@
+# Integração contínua: compila a solução e roda os testes em cada push na main e em cada pull request.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Um push novo na mesma branch cancela a execução anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Compilação e testes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restaurar os pacotes
+        run: dotnet restore
+
+      - name: Compilar
+        run: dotnet build --no-restore
+
+      - name: Testes (sem Chromium)
+        run: dotnet test --no-build --filter "Category!=Integration"
+
+  # Só roda depois que os testes rápidos passam, porque instalar o Chromium é a parte demorada.
+  integration:
+    name: Teste de integração (PDF com Chromium)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar o .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Compilar
+        run: dotnet build
+
+      - name: Instalar o Chromium do Playwright
+        run: pwsh src/Reports.Api/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Testes de integração
+        run: dotnet test --no-build --filter "Category=Integration"
