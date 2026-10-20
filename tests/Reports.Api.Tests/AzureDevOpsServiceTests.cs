@@ -136,6 +136,64 @@ public class AzureDevOpsServiceTests
     }
 
     [Fact]
+    public async Task Lista_os_repositorios_da_organizacao_em_uma_chamada()
+    {
+        _api.Repositories = [new GitRepository { Id = "r1", Name = "api" }];
+
+        var result = await _service.GetAllRepositoriesAsync();
+
+        Assert.Equal("api", Assert.Single(result).Name);
+        Assert.Equal($"repositories {ApiFactory.Organization} {ApiFactory.ApiVersion}", Assert.Single(_api.Calls));
+    }
+
+    [Fact]
+    public async Task Busca_o_commit_mais_recente_sem_pedir_a_ordem_inversa_e_o_mais_antigo_pedindo()
+    {
+        _api.CommitsByRepository["r1"] =
+        [
+            new GitCommit { CommitId = "novo" },
+            new GitCommit { CommitId = "meio" },
+            new GitCommit { CommitId = "antigo" }
+        ];
+
+        Assert.Equal("novo", (await _service.GetLatestCommitAsync("p1", "r1"))!.CommitId);
+        Assert.Equal("antigo", (await _service.GetFirstCommitAsync("p1", "r1"))!.CommitId);
+        Assert.Equal(
+            [
+                $"commits {ApiFactory.Organization} p1 r1 1 - {ApiFactory.ApiVersion}",
+                $"commits {ApiFactory.Organization} p1 r1 1 true {ApiFactory.ApiVersion}"
+            ],
+            _api.Calls);
+    }
+
+    [Fact]
+    public async Task Repositorio_sem_commits_devolve_null()
+    {
+        Assert.Null(await _service.GetLatestCommitAsync("p1", "vazio"));
+        Assert.Null(await _service.GetFirstCommitAsync("p1", "vazio"));
+    }
+
+    [Theory]
+    [InlineData(true, "Erro ao obter repositórios")]
+    [InlineData(false, "Erro ao obter commits do repositório")]
+    public async Task Erro_http_em_repositorios_ou_commits_vira_AzureDevOpsException_em_portugues(
+        bool naListagem, string inicio)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "https://dev.azure.example/");
+        using var response = new HttpResponseMessage(HttpStatusCode.Unauthorized) { RequestMessage = request };
+        var error = await ApiException.Create(request, HttpMethod.Get, response, new RefitSettings());
+        if (naListagem) _api.RepositoriesError = error; else _api.CommitsError = error;
+
+        var ex = await Assert.ThrowsAsync<AzureDevOpsException>(() => naListagem
+            ? _service.GetAllRepositoriesAsync()
+            : _service.GetLatestCommitAsync("p1", "r1"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
+        Assert.StartsWith(inicio, ex.Message);
+        Assert.Contains("401", ex.Message);
+    }
+
+    [Fact]
     public async Task Retorna_lista_vazia_quando_value_e_nulo()
     {
         _api.Projects = null;

@@ -130,6 +130,76 @@ public class AzureDevOpsClientTests
     }
 
     [Fact]
+    public async Task Lista_repositorios_com_rota_versao_e_autenticacao_basic()
+    {
+        var handler = new CapturingHandler("""
+            {"count":2,"value":[
+              {"id":"r1","name":"api","defaultBranch":"refs/heads/main","isDisabled":false,"project":{"id":"p1","name":"Alfa"}},
+              {"id":"r2","name":"velho","isDisabled":true,"project":{"id":"p1","name":"Alfa"}}
+            ]}
+            """);
+        var api = BuildApi(handler);
+
+        var response = await api.GetRepositoriesAsync(ApiFactory.Organization, ApiFactory.ApiVersion);
+
+        var request = Assert.IsType<HttpRequestMessage>(handler.Request);
+        Assert.Equal(ApiFactory.CoreServer, $"{request.RequestUri!.Scheme}://{request.RequestUri.Host}");
+        Assert.Equal($"/{ApiFactory.Organization}/_apis/git/repositories", request.RequestUri.AbsolutePath);
+        Assert.Equal(ApiFactory.ApiVersion,
+            System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query)["api-version"]);
+        Assert.Equal("Basic", request.Headers.Authorization!.Scheme);
+
+        Assert.Equal(2, response.Value.Count);
+        Assert.Equal(("api", "refs/heads/main", false, "p1"),
+            (response.Value[0].Name, response.Value[0].DefaultBranch, response.Value[0].IsDisabled, response.Value[0].Project!.Id));
+        Assert.Null(response.Value[1].DefaultBranch);
+        Assert.True(response.Value[1].IsDisabled);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(true, "true")]
+    public async Task Busca_commits_com_top_1_e_a_ordem_inversa_so_quando_pedida(bool? oldestFirst, string? esperado)
+    {
+        var handler = new CapturingHandler("""
+            {"count":1,"value":[{"commitId":"abc",
+              "author":{"name":"Ana","email":"ana@example.com","date":"2026-01-02T10:00:00Z"},
+              "committer":{"name":"Bruno","email":"bruno@example.com","date":"2026-01-02T11:30:00Z"}}]}
+            """);
+        var api = BuildApi(handler);
+
+        var response = await api.GetCommitsAsync(
+            ApiFactory.Organization, "p1", "r1", 1, oldestFirst, ApiFactory.ApiVersion);
+
+        var request = Assert.IsType<HttpRequestMessage>(handler.Request);
+        Assert.Equal($"/{ApiFactory.Organization}/p1/_apis/git/repositories/r1/commits", request.RequestUri!.AbsolutePath);
+        var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query);
+        Assert.Equal("1", query["searchCriteria.$top"]);
+        Assert.Equal(esperado, query["searchCriteria.showOldestCommitsFirst"]);
+        Assert.Equal(ApiFactory.ApiVersion, query["api-version"]);
+        Assert.Equal("Basic", request.Headers.Authorization!.Scheme);
+
+        var commit = Assert.Single(response.Value);
+        Assert.Equal(("Ana", "Bruno"), (commit.Author!.Name, commit.Committer!.Name));
+        Assert.Equal(new DateTime(2026, 1, 2, 11, 30, 0, DateTimeKind.Utc), commit.Committer.Date.ToUniversalTime());
+    }
+
+    private static IAzureDevOpsApi BuildApi(HttpMessageHandler handler)
+    {
+        var services = new ServiceCollection();
+        services.AddOptions<AzureDevOpsOptions>().Configure(o =>
+        {
+            o.CoreServer = ApiFactory.CoreServer;
+            o.AnalyticsServer = ApiFactory.AnalyticsServer;
+            o.Organization = ApiFactory.Organization;
+            o.AccessToken = ApiFactory.AccessToken;
+        });
+        services.AddAzureDevOpsClient();
+        services.ConfigureHttpClientDefaults(builder => builder.ConfigurePrimaryHttpMessageHandler(() => handler));
+        return services.BuildServiceProvider().GetRequiredService<IAzureDevOpsApi>();
+    }
+
+    [Fact]
     public void A_consulta_conta_no_servidor_sem_os_removidos_agrupando_por_tipo_categoria_e_area()
     {
         var query = AzureDevOpsService.WorkItemGroupsQuery;

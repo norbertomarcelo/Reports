@@ -62,6 +62,28 @@ public class AzureDevOpsService
         return new WorkItemGroups(response?.Value ?? [], response?.NextLink is not null);
     }
 
+    public async Task<IEnumerable<GitRepository>> GetAllRepositoriesAsync()
+    {
+        var response = await CallAsync("repositórios",
+            () => _api.GetRepositoriesAsync(_options.Organization, _options.ApiVersion));
+        return response?.Value ?? new List<GitRepository>();
+    }
+
+    /// <summary>Commit mais recente do branch padrão; <c>null</c> se não houver commits (spec 018).</summary>
+    public Task<GitCommit?> GetLatestCommitAsync(string projectId, string repositoryId) =>
+        GetSingleCommitAsync(projectId, repositoryId, null);
+
+    /// <summary>Commit mais antigo do branch padrão; <c>null</c> se não houver commits (spec 018).</summary>
+    public Task<GitCommit?> GetFirstCommitAsync(string projectId, string repositoryId) =>
+        GetSingleCommitAsync(projectId, repositoryId, true);
+
+    private async Task<GitCommit?> GetSingleCommitAsync(string projectId, string repositoryId, bool? oldestFirst)
+    {
+        var response = await CallAsync("commits do repositório",
+            () => _api.GetCommitsAsync(_options.Organization, projectId, repositoryId, 1, oldestFirst, _options.ApiVersion));
+        return response?.Value?.FirstOrDefault();
+    }
+
     private static async Task<T?> CallAsync<T>(string resource, Func<Task<T>> call)
     {
         try
