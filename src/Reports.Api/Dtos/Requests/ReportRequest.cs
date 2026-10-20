@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Reports.AzureDevOps.Dtos.Requests;
 
 namespace Reports.Api.Dtos.Requests;
 
@@ -8,20 +9,4 @@ public class ReportRequest
 {
     [Required(ErrorMessage = "Informe as seções do relatório em 'include'.")]
     public ReportSections? Include { get; set; }
-}
-
-[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-public class ReportSections : IValidatableObject
-{
-    public bool Projects { get; set; }
-    public bool Teams { get; set; }
-    public bool Users { get; set; }
-    public bool WorkItems { get; set; }
-    public bool Repositories { get; set; }
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        if (!Projects && !Teams && !Users && !WorkItems && !Repositories)
-            yield return new ValidationResult("Selecione ao menos uma seção do relatório.");
-    }
 }

@@ -1,6 +1,6 @@
-using Reports.Api.Services;
 using Reports.Api.Services.Pdf;
 using Reports.Api.Settings;
+using Reports.AzureDevOps;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,14 +10,7 @@ builder.Services.AddControllers().AddPortugueseValidationResponses();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddOptions<AzureDevOpsOptions>()
-    .BindConfiguration(AzureDevOpsOptions.SectionName)
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
-builder.Services.AddAzureDevOpsClient();
-
-builder.Services.AddScoped<AzureDevOpsService>();
-builder.Services.AddScoped<ReportService>();
+builder.Services.AddAzureDevOpsReports();
 builder.Services.AddSingleton<IPdfRenderer, PlaywrightPdfRenderer>();
 
 var app = builder.Build();
