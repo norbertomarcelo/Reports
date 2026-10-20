@@ -6,8 +6,9 @@ namespace Reports.Api.Tests;
 public class ReportOutlineTests
 {
     private static ReportSections Sections(
-        bool projects = false, bool teams = false, bool users = false, bool workItems = false) =>
-        new() { Projects = projects, Teams = teams, Users = users, WorkItems = workItems };
+        bool projects = false, bool teams = false, bool users = false, bool workItems = false,
+        bool repositories = false) =>
+        new() { Projects = projects, Teams = teams, Users = users, WorkItems = workItems, Repositories = repositories };
 
     [Fact]
     public void So_projetos_numera_apenas_o_capitulo_de_projetos()
@@ -108,6 +109,37 @@ public class ReportOutlineTests
         var chapter = Assert.Single(outline.ProjectChapters);
         Assert.Equal(["3", "3.1", "3.2", "3.3", "3.4"],
             [chapter.Chapter, chapter.Teams!, chapter.UsersByTeam!, chapter.ProjectUsers!, chapter.WorkItems!]);
+    }
+
+    [Fact]
+    public void So_repositorios_numera_o_projeto_como_1_e_o_subcapitulo_como_1_1()
+    {
+        var outline = ReportOutline.Build(Sections(repositories: true), [2]);
+
+        Assert.Null(outline.Projects);
+        Assert.Null(outline.WorkItems);
+        var chapter = Assert.Single(outline.ProjectChapters);
+        Assert.Equal(["1", "1.1"], [chapter.Chapter, chapter.Repositories!]);
+        Assert.Null(chapter.Teams);
+        Assert.Null(chapter.WorkItems);
+    }
+
+    [Fact]
+    public void Com_todas_as_secoes_repositorios_e_o_ultimo_subcapitulo_depois_de_itens_de_trabalho()
+    {
+        var outline = ReportOutline.Build(
+            Sections(projects: true, teams: true, users: true, workItems: true, repositories: true), [1]);
+
+        var chapter = Assert.Single(outline.ProjectChapters);
+        Assert.Equal(["3", "3.4", "3.5"], [chapter.Chapter, chapter.WorkItems!, chapter.Repositories!]);
+    }
+
+    [Fact]
+    public void Sem_a_flag_nao_ha_numero_de_repositorios()
+    {
+        var outline = ReportOutline.Build(Sections(projects: true, teams: true, workItems: true), [1]);
+
+        Assert.Null(Assert.Single(outline.ProjectChapters).Repositories);
     }
 
     [Fact]

@@ -7,7 +7,7 @@ public record Outline(string? Projects, IReadOnlyList<ProjectOutline> ProjectCha
 
 /// <summary>
 /// <c>TeamNumbers</c> só é preenchida com a seção de usuários (um número por time);
-/// <c>ProjectUsers</c> também só existe com ela (spec 016). <c>WorkItems</c> é o último subcapítulo (spec 017).
+/// <c>ProjectUsers</c> também só existe com ela (spec 016). <c>WorkItems</c> vem depois (spec 017) e <c>Repositories</c> é o último subcapítulo (spec 018).
 /// </summary>
 public record ProjectOutline(
     string Chapter,
@@ -15,7 +15,8 @@ public record ProjectOutline(
     string? UsersByTeam,
     IReadOnlyList<string> TeamNumbers,
     string? ProjectUsers,
-    string? WorkItems);
+    string? WorkItems,
+    string? Repositories);
 
 /// <summary>Calcula a numeração sequencial sobre o que foi incluído no relatório (spec 015, RF-03).</summary>
 public static class ReportOutline
@@ -28,7 +29,7 @@ public static class ReportOutline
         var workItemsOverview = sections.WorkItems ? (++chapter).ToString() : null;
 
         var chapters = new List<ProjectOutline>();
-        if (sections.Teams || sections.Users || sections.WorkItems)
+        if (sections.Teams || sections.Users || sections.WorkItems || sections.Repositories)
         {
             foreach (var teamCount in teamCounts)
             {
@@ -47,9 +48,10 @@ public static class ReportOutline
                 }
 
                 var workItems = sections.WorkItems ? $"{number}.{++sub}" : null;
+                var repositories = sections.Repositories ? $"{number}.{++sub}" : null;
 
                 chapters.Add(new ProjectOutline(
-                    number.ToString(), teams, usersByTeam, teamNumbers, projectUsers, workItems));
+                    number.ToString(), teams, usersByTeam, teamNumbers, projectUsers, workItems, repositories));
             }
         }
 
