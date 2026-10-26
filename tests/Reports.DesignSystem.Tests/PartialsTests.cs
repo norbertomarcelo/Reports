@@ -25,7 +25,7 @@ public class PartialsTests
     /// O Razor escreve acentos como entidades (<c>&amp;#xE1;</c>), que o navegador decodifica. Aqui só os caracteres
     /// fora do ASCII são decodificados: <c>&amp;lt;</c> e companhia ficam, para o teste de escape.
     /// </summary>
-    private static async Task<string> RenderAsync(string view, object model, Dictionary<string, object?>? viewData = null)
+    private static async Task<string> RenderAsync(string view, object model, Dictionary<string, object>? viewData = null)
     {
         var html = await RazorTemplateEngine.RenderPartialAsync("/Views/DesignSystem/" + view + ".cshtml", model, viewData);
         return Regex.Replace(html, "&#x(?<codigo>[0-9A-Fa-f]+);", m =>
