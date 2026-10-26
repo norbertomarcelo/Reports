@@ -1,45 +1,48 @@
 @using Reports.AzureDevOps.Views.Models
+@using Reports.DesignSystem
 
 @model Chapter<IReadOnlyList<RepositoryRow>>
 
-<h2>@Model.Number Repositórios</h2>
+<h2 class="ra-section__title">@Model.Number Repositórios</h2>
 
 @if (Model.Content.Count == 0)
 {
-    <p>Nenhum repositório encontrado.</p>
+    <p class="ra-muted">Nenhum repositório encontrado.</p>
 }
 else
 {
-    <table class="table table-striped table-bordered">
-        <thead class="thead-dark">
-            <tr>
-                <th>Repositório</th>
-                <th>Criador</th>
-                <th>Último commit</th>
-                <th>Autor do último commit</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var repository in Model.Content)
-            {
+    <div class="ra-table-wrap">
+        <table class="ra-table ra-table--ad">
+            <thead>
                 <tr>
-                    <td>
-                        @repository.Name
-                        @if (repository.IsEmpty)
-                        {
-                            <span class="marca">Vazio</span>
-                        }
-                        else if (repository.IsDisabled)
-                        {
-                            <span class="marca">Desativado</span>
-                        }
-                    </td>
-                    <td>@(repository.Creator ?? "—")</td>
-                    <td>@(repository.LastCommitDate?.ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
-                    <td>@(repository.LastCommitAuthor ?? "—")</td>
+                    <th>Repositório</th>
+                    <th>Criador</th>
+                    <th class="ra-num">Último commit</th>
+                    <th>Autor do último commit</th>
                 </tr>
-            }
-        </tbody>
-    </table>
-    <p>Criador: autor do primeiro commit do branch padrão.</p>
+            </thead>
+            <tbody>
+                @foreach (var repository in Model.Content)
+                {
+                    <tr>
+                        <td class="ra-id">
+                            @repository.Name
+                            @if (repository.IsEmpty)
+                            {
+                                <span class="ra-badge">Vazio</span>
+                            }
+                            else if (repository.IsDisabled)
+                            {
+                                <span class="ra-badge">Desativado</span>
+                            }
+                        </td>
+                        <td>@(repository.Creator ?? "—")</td>
+                        <td class="ra-num">@(repository.LastCommitDate is { } date ? Ra.DateTime(date) : "—")</td>
+                        <td>@(repository.LastCommitAuthor ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="ra-caption">Criador: autor do primeiro commit do branch padrão.</p>
 }

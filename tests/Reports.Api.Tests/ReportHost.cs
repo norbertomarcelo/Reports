@@ -24,11 +24,17 @@ public static class ReportHost
     public static WebApplicationFactory<Program> Create(
         FakeAzureDevOpsApi api, FakePdfRenderer pdf, FakeAzureDevOpsAnalyticsApi analytics,
         params string[] internalDomains) =>
+        Create(api, pdf, analytics, new Dictionary<string, string?>(), internalDomains);
+
+    /// <param name="settings">Chaves de configuração que sobrepõem as do <see cref="ApiFactory"/> (ex.: <c>AzureDevOps:Organization</c>).</param>
+    public static WebApplicationFactory<Program> Create(
+        FakeAzureDevOpsApi api, FakePdfRenderer pdf, FakeAzureDevOpsAnalyticsApi analytics,
+        IReadOnlyDictionary<string, string?> settings, params string[] internalDomains) =>
         new ApiFactory().WithWebHostBuilder(builder =>
         {
             builder.ConfigureAppConfiguration((_, config) =>
-                config.AddInMemoryCollection(internalDomains.Select((domain, i) =>
-                    new KeyValuePair<string, string?>($"AzureDevOps:InternalDomains:{i}", domain))));
+                config.AddInMemoryCollection(settings.Concat(internalDomains.Select((domain, i) =>
+                    new KeyValuePair<string, string?>($"AzureDevOps:InternalDomains:{i}", domain)))));
             builder.ConfigureTestServices(services =>
             {
                 services.AddSingleton<IAzureDevOpsApi>(api);

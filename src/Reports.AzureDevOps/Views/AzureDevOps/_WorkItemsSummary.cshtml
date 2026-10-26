@@ -1,28 +1,32 @@
 @using Reports.AzureDevOps.Services
 @using Reports.AzureDevOps.Views.Models
+@using Reports.DesignSystem
 
 @model Chapter<WorkItemSummary>
 
-<h2>@Model.Number Itens de trabalho</h2>
+<h2 class="ra-section__title">@Model.Number Itens de trabalho</h2>
 
 @if (Model.Content.Partial)
 {
-    <p><span class="alerta">Contagem parcial: o Azure DevOps devolveu o resultado em mais de uma página.</span></p>
+    <div class="ra-alert ra-alert--warn">
+        <span class="ra-badge ra-badge--warn">Atenção</span>
+        <p><b>Contagem parcial:</b> o Azure DevOps devolveu o resultado em mais de uma página.</p>
+    </div>
 }
 
 @if (Model.Content.Total == 0)
 {
-    <p>Nenhum item de trabalho encontrado.</p>
+    <p class="ra-muted">Nenhum item de trabalho encontrado.</p>
 }
 else
 {
-    <p>Total: @Model.Content.Total · Abertos: @Model.Content.Open · Fechados: @Model.Content.Closed</p>
+    <p>Total: @Ra.Number(Model.Content.Total) · Abertos: @Ra.Number(Model.Content.Open) · Fechados: @Ra.Number(Model.Content.Closed)</p>
 
-    <p class="rotulo">Por tipo</p>
+    <p class="ra-label">Por tipo</p>
     @await Html.PartialAsync("/Views/AzureDevOps/_CountTable.cshtml",
         new CountTable("Tipo", Model.Content.ByType, Model.Content.Open, Model.Content.Closed))
 
-    <p class="rotulo">Por área</p>
+    <p class="ra-label">Por área</p>
     @await Html.PartialAsync("/Views/AzureDevOps/_CountTable.cshtml",
         new CountTable("Área", Model.Content.ByArea, Model.Content.Open, Model.Content.Closed))
 }

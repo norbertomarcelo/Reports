@@ -1,67 +1,70 @@
 @using Reports.AzureDevOps.Views.Models
+@using Reports.DesignSystem
 
 @model ProjectChapter
 
-<h1>@(Model.Number). @Model.Name</h1>
+<h1 class="ra-h1">@(Model.Number). @Model.Name</h1>
 
 @if (Model.Teams is not null)
 {
-    <h2>@Model.Teams.Number Times</h2>
+    <h2 class="ra-section__title">@Model.Teams.Number Times</h2>
 
     @if (Model.Teams.Content.Count == 0)
     {
-        <p>Nenhum time encontrado.</p>
+        <p class="ra-muted">Nenhum time encontrado.</p>
     }
     else
     {
         // Contagens só existem quando os membros foram buscados (`users`).
         var counts = Model.Teams.Content[0].MemberCount is not null;
-        <table class="table table-striped table-bordered">
-            <thead class="thead-dark">
-                <tr>
-                    <th>Time</th>
-                    <th>Descrição</th>
-                    @if (counts)
-                    {
-                        <th>Membros</th>
-                        <th>Administradores</th>
-                    }
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var team in Model.Teams.Content)
-                {
+        <div class="ra-table-wrap">
+            <table class="ra-table ra-table--ad">
+                <thead>
                     <tr>
-                        <td>@team.Team</td>
-                        <td>@team.Description</td>
+                        <th>Time</th>
+                        <th>Descrição</th>
                         @if (counts)
                         {
-                            <td>@team.MemberCount</td>
-                            <td>
-                                @if (team.NoAdmin)
-                                {
-                                    <span class="alerta">Sem administrador</span>
-                                }
-                                else
-                                {
-                                    @team.AdminCount
-                                }
-                            </td>
+                            <th class="ra-num">Membros</th>
+                            <th class="ra-num">Administradores</th>
                         }
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var team in Model.Teams.Content)
+                    {
+                        <tr>
+                            <td>@team.Team</td>
+                            <td>@team.Description</td>
+                            @if (counts)
+                            {
+                                <td class="ra-num">@Ra.Number(team.MemberCount ?? 0)</td>
+                                <td class="ra-num">
+                                    @if (team.NoAdmin)
+                                    {
+                                        <span class="ra-badge ra-badge--warn">Sem administrador</span>
+                                    }
+                                    else
+                                    {
+                                        @Ra.Number(team.AdminCount ?? 0)
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 }
 
 @if (Model.UsersByTeam is not null)
 {
-    <h2>@Model.UsersByTeam.Number Usuários por time</h2>
+    <h2 class="ra-section__title">@Model.UsersByTeam.Number Usuários por time</h2>
 
     @if (Model.UsersByTeam.Content.Count == 0)
     {
-        <p>Nenhum time encontrado.</p>
+        <p class="ra-muted">Nenhum time encontrado.</p>
     }
 
     @foreach (var team in Model.UsersByTeam.Content)
@@ -70,80 +73,84 @@
 
         @if (team.Users.Count == 0)
         {
-            <p>Nenhum usuário encontrado.</p>
+            <p class="ra-muted">Nenhum usuário encontrado.</p>
         }
         else
         {
-            <table class="table table-striped table-bordered">
-                <thead class="thead-dark">
-                    <tr>
-                        <th>Nome</th>
-                        <th>E-mail</th>
-                        <th>Administrador</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var user in team.Users)
-                    {
+            <div class="ra-table-wrap">
+                <table class="ra-table ra-table--ad">
+                    <thead>
                         <tr>
-                            <td>
-                                @user.Name
-                                @if (user.IsGroup)
-                                {
-                                    <span class="marca">Grupo</span>
-                                }
-                                @if (user.IsExternal)
-                                {
-                                    <span class="marca">Externo</span>
-                                }
-                            </td>
-                            <td>@user.Email</td>
-                            <td>@(user.IsAdmin ? "Sim" : "Não")</td>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th>Administrador</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in team.Users)
+                        {
+                            <tr>
+                                <td>
+                                    @user.Name
+                                    @if (user.IsGroup)
+                                    {
+                                        <span class="ra-badge">Grupo</span>
+                                    }
+                                    @if (user.IsExternal)
+                                    {
+                                        <span class="ra-badge">Externo</span>
+                                    }
+                                </td>
+                                <td>@user.Email</td>
+                                <td>@(user.IsAdmin ? "Sim" : "Não")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     }
 }
 
 @if (Model.ProjectUsers is not null)
 {
-    <h2>@Model.ProjectUsers.Number Usuários do projeto</h2>
+    <h2 class="ra-section__title">@Model.ProjectUsers.Number Usuários do projeto</h2>
 
     @if (Model.ProjectUsers.Content.Count == 0)
     {
-        <p>Nenhum usuário encontrado.</p>
+        <p class="ra-muted">Nenhum usuário encontrado.</p>
     }
     else
     {
-        <table class="table table-striped table-bordered">
-            <thead class="thead-dark">
-                <tr>
-                    <th>Nome</th>
-                    <th>E-mail</th>
-                    <th>Times</th>
-                    <th>Administrador em</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var user in Model.ProjectUsers.Content)
-                {
+        <div class="ra-table-wrap">
+            <table class="ra-table ra-table--ad">
+                <thead>
                     <tr>
-                        <td>
-                            @user.Name
-                            @if (user.IsExternal)
-                            {
-                                <span class="marca">Externo</span>
-                            }
-                        </td>
-                        <td>@user.Email</td>
-                        <td>@string.Join(", ", user.Teams)</td>
-                        <td>@string.Join(", ", user.AdminOf)</td>
+                        <th>Nome</th>
+                        <th>E-mail</th>
+                        <th>Times</th>
+                        <th>Administrador em</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model.ProjectUsers.Content)
+                    {
+                        <tr>
+                            <td>
+                                @user.Name
+                                @if (user.IsExternal)
+                                {
+                                    <span class="ra-badge">Externo</span>
+                                }
+                            </td>
+                            <td>@user.Email</td>
+                            <td>@string.Join(", ", user.Teams)</td>
+                            <td>@string.Join(", ", user.AdminOf)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 }
 

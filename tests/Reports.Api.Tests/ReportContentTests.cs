@@ -35,7 +35,7 @@ public class ReportContentTests
             ReportHost.Json($$"""{ "include": { {{include}} } }"""));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return (WebUtility.HtmlDecode(pdf.Html!), api);
+        return (Capitulos(pdf.Html!), api);
     }
 
     [Fact]
@@ -81,6 +81,20 @@ public class ReportContentTests
         api.MembersByTeam["ta"] = [new TeamMember { Identity = Bia }];
         api.MembersByTeam["tz"] = [new TeamMember { Identity = Ana }];
         return api;
+    }
+
+    /// <summary>
+    /// Só o corpo do relatório (os capítulos). A capa e a visão geral (spec 020) repetem nomes e textos
+    /// que as asserções de conteúdo não devem ver.
+    /// </summary>
+    private static string Capitulos(string html)
+    {
+        const string abre = "<main class=\"ra-chapters\">";
+        var inicio = html.IndexOf(abre, StringComparison.Ordinal);
+        Assert.True(inicio >= 0, abre);
+        var fim = html.IndexOf("</main>", inicio, StringComparison.Ordinal);
+        Assert.True(fim >= 0, "</main>");
+        return WebUtility.HtmlDecode(html[inicio..(fim + "</main>".Length)]);
     }
 
     private static List<(int Nivel, string Texto)> Titulos(string html) =>
@@ -373,7 +387,7 @@ public class ReportContentTests
             ReportHost.Json($$"""{ "include": { {{include}} } }"""));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return WebUtility.HtmlDecode(pdf.Html!);
+        return Capitulos(pdf.Html!);
     }
 
     private static FakeAzureDevOpsApi ProjetoAlfa() =>
@@ -869,7 +883,7 @@ public class ReportContentTests
         var response = await factory.CreateClient().PostAsync(ReportHost.Route, ReportHost.Json(
             """{ "include": { "projects": true, "teams": true, "users": true, "workItems": true, "repositories": true } }"""));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var titulos = Titulos(WebUtility.HtmlDecode(pdf.Html!));
+        var titulos = Titulos(Capitulos(pdf.Html!));
         Assert.Equal((2, "3.5 Repositórios"), titulos[^1]);
         Assert.Equal((2, "3.4 Itens de trabalho"), titulos[^2]);
     }
