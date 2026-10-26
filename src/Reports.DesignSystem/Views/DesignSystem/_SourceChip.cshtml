@@ -1,0 +1,11 @@
+@model Reports.DesignSystem.SourceVm
+@using Reports.DesignSystem
+@{
+    var onGrad = ViewData["OnGrad"] is true;      // capa
+    var iconOnly = ViewData["IconOnly"] is true;  // listas densas
+    var css = onGrad ? "ra-source ra-source--on-grad" : $"ra-source ra-source--{Ra.Key(Model.Provider)}";
+    if (iconOnly) { css += " ra-source--icon"; }
+    var name = Ra.ProviderName(Model.Provider);
+    var label = Model.Account is null ? name : $"{name} · {Model.Account}";
+}
+<span class="@css" title="@label"><span class="ra-source__mark">@Ra.Mark(Model.Provider)</span>@if (!iconOnly) { <text>@label</text> }</span>

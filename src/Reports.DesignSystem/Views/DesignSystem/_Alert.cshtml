@@ -1,0 +1,6 @@
+@model Reports.DesignSystem.AlertVm
+@using Reports.DesignSystem
+<div class="@Ra.AlertClass(Model.Level)">
+  <span class="@Ra.AlertBadgeClass(Model.Level)">@Ra.AlertLabel(Model.Level)</span>
+  <p><b>@Model.Title</b> @Model.Body</p>
+</div>

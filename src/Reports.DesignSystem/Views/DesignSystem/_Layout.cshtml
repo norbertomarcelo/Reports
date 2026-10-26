@@ -1,0 +1,33 @@
+@model Reports.DesignSystem.IReportModel
+@using Reports.DesignSystem
+@{
+    var doc = Model.Document;
+    var providers = string.Join(", ", doc.Sources.Select(s => Ra.ProviderName(s.Provider)).Distinct());
+    var footer = providers.Length == 0 ? "Relatórios de Ambientes" : "Relatórios de Ambientes · " + providers;
+
+    // Textos do cabeçalho e do rodapé de cada folha (caixas de margem do @page). Só o código (ReportCode, só letras,
+    // dígitos e hífen) e nomes de fonte fixos entram aqui: nada digitado pelo usuário vai para dentro de uma string CSS.
+    // Vão por Html.Raw porque o Razor escreveria "·" como entidade, que um <style> não decodifica.
+    var pageText =
+        $"@page {{ @top-right {{ content: \"{doc.Code} · \" counter(page) \"/\" counter(pages); }} " +
+        $"@bottom-left {{ content: \"{footer}\"; }} " +
+        $"@bottom-right {{ content: \"{doc.Code}\"; }} }}";
+}
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <title>@doc.Code — @doc.Title</title>
+  @* A ordem importa: o @page :first do report-flow.css (capa sem cabeçalho) só vence se vier DEPOIS destes textos. *@
+  <style>@Html.Raw(pageText)</style>
+  <style>@Html.Raw(DesignSystemAssets.Styles)</style>
+</head>
+<body class="ra-root ra-report-doc">
+  @await Html.PartialAsync("/Views/DesignSystem/_Mark.cshtml")
+  @await Html.PartialAsync("/Views/DesignSystem/_Cover.cshtml", doc)
+  @await Html.PartialAsync("/Views/DesignSystem/_Overview.cshtml", doc)
+  <main class="ra-chapters">
+    @RenderBody()
+  </main>
+</body>
+</html>

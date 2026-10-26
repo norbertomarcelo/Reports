@@ -1,0 +1,79 @@
+/* =====================================================================
+   Adaptação do projeto ao design system (spec 020): relatório em fluxo.
+   Só a capa é folha fixa (.ra-page--cover, do report.css); o resto flui e o
+   Chromium faz as quebras de página. Carregado depois de report.css.
+   Só tokens para cor, fonte, tamanho de texto e espaço; as medidas de folha
+   (A4, margens, 794px) são geometria de página, como os 210mm × 297mm do report.css.
+   Os textos do cabeçalho e do rodapé (código, n/total, fonte) vêm do _Layout.
+   ===================================================================== */
+
+:root { --ra-strip: linear-gradient(to right, var(--grad-start), var(--grad-end)); }
+
+/* O Chromium só pinta cor sólida no fundo do @page e corta elemento fixo na área útil.
+   Por isso a faixa em degradê do topo é costurada nas caixas de margem: cada uma pinta o seu
+   pedaço do mesmo degradê, de 794px (a largura da folha). Larguras e posições em px inteiros,
+   senão o arredondamento deixa um vão de ~0,2mm entre as caixas. Com a marca na mesma caixa, a
+   faixa precisa ser a PRIMEIRA camada de fundo; na ordem inversa o Chromium a estica na caixa toda. */
+@page {
+  size: A4;
+  margin: 24mm 14mm 18mm;
+
+  @top-left-corner  { content: ""; width: 53px; background-image: var(--ra-strip); background-size: 794px 8px; background-repeat: no-repeat; background-position: 0 0; }
+  @top-left {
+    content: "Relatórios de Ambientes"; width: 249px; padding-left: 20px;
+    background-image: var(--ra-strip), var(--ra-mark-teal); background-size: 794px 8px, 12px 22px;
+    background-repeat: no-repeat, no-repeat; background-position: -53px 0, 0 center;
+    font: var(--text-small); font-weight: 600; color: var(--ink);
+  }
+  @top-center       { content: ""; width: 189px; background-image: var(--ra-strip); background-size: 794px 8px; background-repeat: no-repeat; background-position: -302px 0; }
+  @top-right {
+    width: 250px; text-align: right;
+    background-image: var(--ra-strip); background-size: 794px 8px; background-repeat: no-repeat; background-position: -491px 0;
+    font: var(--text-caption); font-family: var(--font-mono); color: var(--ink-muted);
+  }
+  @top-right-corner { content: ""; width: 53px; background-image: var(--ra-strip); background-size: 794px 8px; background-repeat: no-repeat; background-position: -741px 0; }
+
+  @bottom-left  { font: var(--text-caption); color: var(--ink-muted); }
+  @bottom-right { font: var(--text-caption); font-family: var(--font-mono); color: var(--ink-muted); }
+}
+
+/* A capa é a primeira folha: sem margem e sem nenhuma caixa de cabeçalho ou rodapé. */
+@page :first {
+  margin: 0;
+  @top-left-corner { content: none; } @top-left { content: none; background: none; } @top-center { content: none; }
+  @top-right { content: none; background: none; } @top-right-corner { content: none; }
+  @bottom-left { content: none; } @bottom-right { content: none; }
+}
+
+@media print {
+  body.ra-root.ra-report-doc { background: var(--surface-raised); }  /* o body.ra-root do ra.css vence o reset do report.css */
+  .ra-table-wrap { overflow: visible; }                              /* contêiner rolável não se fragmenta entre folhas */
+  .ra-grid { grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); }  /* a área útil (~688px) cai no max-width: 720px do ra.css */
+  .ra-chapters h1, .ra-chapters h2, .ra-chapters h3, .ra-overview h1 { break-after: avoid; }
+  .ra-table tr, .ra-alert, .ra-kpi { break-inside: avoid; }
+  .ra-overview { break-after: page; }
+}
+
+.ra-chapters h3 { font: var(--text-body-strong); }
+
+/* Ritmo vertical dos capítulos. Em bloco, não em flex: o Chromium quebra melhor entre folhas assim. */
+.ra-chapters h1 { margin: var(--space-8) 0 var(--space-3); }
+.ra-chapters h2 { margin: var(--space-6) 0 var(--space-3); }
+.ra-chapters h3 { margin: var(--space-4) 0 var(--space-2); }
+.ra-chapters p { margin: 0 0 var(--space-3); }
+.ra-chapters .ra-table-wrap, .ra-chapters .ra-alert { margin-bottom: var(--space-3); }
+
+/* Cabeçalhos e células quebram linha. Com o nowrap do ra.css, a tabela de projetos (8 colunas) passa da largura
+   da folha e o Chromium encolhe o DOCUMENTO INTEIRO para caber, com a capa e tudo (testado no ReportPdfTests). */
+.ra-chapters .ra-table th { white-space: normal; }
+.ra-chapters .ra-table td { overflow-wrap: anywhere; }
+/* A folha tem ~688px úteis e a tabela de projetos tem 8 colunas: com os 10px laterais do ra.css só o
+   preenchimento já passava de 160px. --space-2 (8px) é o espaço do DS mais próximo. */
+.ra-chapters .ra-table th, .ra-chapters .ra-table td { padding-inline: var(--space-2); }
+
+/* Visão geral: KPIs e alertas em coluna (a grade e os alertas já vêm do ra.css). */
+.ra-overview { display: flex; flex-direction: column; gap: var(--space-6); }
+.ra-overview .ra-h1 { margin: 0; }
+
+/* Chips de fonte da capa (o DS usa style="gap:var(--space-2)" no exemplo). */
+.ra-cover__sources { gap: var(--space-2); }

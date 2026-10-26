@@ -2,33 +2,26 @@
 
 @model ReportViewModel
 
-<style>
-    .projetos { font-size: 0.85em; }
-    h1 { font-size: 1.6em; margin-top: 1.2em; }
-    h2 { font-size: 1.25em; margin-top: 1em; }
-    h3 { font-size: 1.05em; margin: 0.8em 0 0.4em 1.2em; }
-    .marca { font-size: 0.75em; border: 1px solid #888; border-radius: 3px; padding: 0 0.3em; margin-left: 0.3em; }
-    .alerta { color: #b00020; font-weight: bold; }
-    .numero { text-align: right; }
-    .rotulo { font-weight: bold; margin: 0.6em 0 0.2em; }
-    tr.total td { font-weight: bold; }
-</style>
+@{
+    // Capa, visão geral, <main> e o CSS vêm do design system (spec 020); aqui só o conteúdo dos capítulos.
+    Layout = "/Views/DesignSystem/_Layout.cshtml";
+}
 
 @if (Model.NoProjects)
 {
-    <p>Nenhum projeto encontrado.</p>
+    <p class="ra-muted">Nenhum projeto encontrado.</p>
 }
 
 @if (Model.Projects is not null)
 {
-    <h1>@(Model.Projects.Number). Projetos</h1>
+    <h1 class="ra-h1">@(Model.Projects.Number). Projetos</h1>
 
     @await Html.PartialAsync("/Views/AzureDevOps/_ProjectsTable.cshtml", Model.Projects.Content)
 }
 
 @if (Model.WorkItems is not null)
 {
-    <h1>@(Model.WorkItems.Number). Itens de trabalho</h1>
+    <h1 class="ra-h1">@(Model.WorkItems.Number). Itens de trabalho</h1>
 
     @await Html.PartialAsync("/Views/AzureDevOps/_WorkItemsOverview.cshtml", Model.WorkItems.Content)
 }

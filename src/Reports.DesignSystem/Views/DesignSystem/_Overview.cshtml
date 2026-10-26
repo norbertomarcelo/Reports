@@ -1,0 +1,28 @@
+@model Reports.DesignSystem.ReportDocument
+@using Reports.DesignSystem
+@* Folha própria, logo depois da capa: KPIs e alertas montados pelo provedor. *@
+<section class="ra-overview">
+  <h1 class="ra-h1">Visão geral</h1>
+  <div class="ra-grid" style="--cols:@Model.Kpis.Count">
+    @foreach (var kpi in Model.Kpis)
+    {
+      @await Html.PartialAsync("/Views/DesignSystem/_Kpi.cshtml", kpi)
+    }
+  </div>
+  <section class="ra-section">
+    <h2 class="ra-section__title">Alertas</h2>
+    @if (Model.Alerts.Count == 0)
+    {
+      <p class="ra-muted">Nenhum ponto de atenção.</p>
+    }
+    else
+    {
+      <div class="ra-alerts">
+        @foreach (var alert in Model.Alerts)
+        {
+          @await Html.PartialAsync("/Views/DesignSystem/_Alert.cshtml", alert)
+        }
+      </div>
+    }
+  </section>
+</section>

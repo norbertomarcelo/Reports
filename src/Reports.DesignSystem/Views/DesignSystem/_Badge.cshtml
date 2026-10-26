@@ -1,0 +1,3 @@
+@model Reports.DesignSystem.Status
+@using Reports.DesignSystem
+<span class="@Ra.BadgeClass(Model)">@(ViewData["Label"] as string ?? Ra.StatusLabel(Model))</span>

@@ -1,0 +1,67 @@
+/* =====================================================================
+   Relatórios de Ambientes — layout do relatório A4 (report.css)
+   Carregue depois de tokens.css, fonts.css e ra.css.
+   O relatório é sempre claro: use <html data-theme="light"> no template.
+   Cada .ra-page é UMA folha A4. O conteúdo de uma folha não pode passar
+   da altura dela: divida tabelas longas em várias folhas no servidor.
+   ===================================================================== */
+
+.ra-report-doc { margin: 0; background: #d9e3e3; padding: 32px 16px; font: var(--text-report-body); color: var(--ink); }
+
+.ra-page {
+  position: relative; overflow: hidden;
+  width: 210mm; max-width: 100%; min-height: 297mm; margin: 0 auto 24px;
+  background: var(--surface-raised); box-shadow: var(--shadow-page);
+  padding: var(--space-14) var(--space-14) 40px;
+  display: flex; flex-direction: column; gap: var(--space-6);
+  font: var(--text-report-body);
+}
+/* faixa em degradê no topo de cada folha interna */
+.ra-page::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 8px; background: var(--grad); }
+
+.ra-page__header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); }
+.ra-page__brand { display: flex; align-items: center; gap: var(--space-2); font: 600 13px/20px var(--font-sans); color: var(--ink); }
+.ra-page__brand svg { width: 16px; height: 29px; color: var(--teal); }
+.ra-page__code { font: 400 11px/16px var(--font-mono); color: var(--ink-muted); }
+.ra-page__footer { margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; font: var(--text-caption); color: var(--ink-muted); }
+.ra-page__footer .ra-mono { font-size: 11px; }
+
+.ra-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+
+/* ---------- Capa ---------- */
+.ra-page--cover { background: var(--grad); color: var(--on-grad); padding: 0; gap: 0; }
+.ra-page--cover::before { display: none; }
+.ra-cover__top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); padding: var(--space-12) var(--space-14) 0; }
+.ra-cover__top .ra-page__brand, .ra-cover__top .ra-page__brand svg { color: var(--on-grad); }
+.ra-cover__top .ra-page__code { color: var(--on-grad-accent); }
+.ra-cover__art { flex: 1; display: grid; place-items: center; padding: var(--space-6) var(--space-14); min-height: 420px; }
+.ra-cover__art svg { width: min(440px, 100%); height: auto; }
+.ra-cover__body { padding: 0 var(--space-14) 40px; display: flex; flex-direction: column; gap: 20px; }
+.ra-cover__eyebrow { font: var(--text-label); letter-spacing: .08em; text-transform: uppercase; color: var(--on-grad-accent); margin: 0; }
+.ra-cover__title { font: var(--text-cover); letter-spacing: var(--text-cover-tracking); margin: 0; color: var(--on-grad); text-wrap: balance; }
+.ra-cover__subtitle { font: var(--text-subtitle); margin: 0; color: var(--on-grad); opacity: .9; }
+.ra-cover__facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--surface-raised); color: var(--ink); border-radius: var(--radius-lg); overflow: hidden; }
+.ra-cover__fact { padding: 14px var(--space-4); display: flex; flex-direction: column; gap: 4px; border-left: 1px solid var(--line); min-width: 0; }
+.ra-cover__fact:first-child { border-left: 0; }
+.ra-cover__fact .ra-label { color: var(--ink-muted); }
+.ra-cover__fact-value { font: 400 14px/20px var(--font-mono); }
+
+/* ---------- Tela estreita (só pré-visualização) ---------- */
+@media screen and (max-width: 640px) {
+  .ra-page { padding: 36px 20px 28px; min-height: 0; }
+  .ra-cover__top, .ra-cover__body, .ra-cover__art { padding-left: 20px; padding-right: 20px; }
+  .ra-cover__art { min-height: 0; }
+  .ra-cover__title { font-size: 34px; line-height: 40px; }
+  .ra-cover__facts, .ra-page .ra-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ra-two { grid-template-columns: 1fr; }
+}
+
+/* ---------- Impressão / PDF ---------- */
+@page { size: A4; margin: 0; }
+@media print {
+  html, body, .ra-report-doc { background: none; padding: 0; margin: 0; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ra-page { width: 210mm; height: 297mm; min-height: 0; margin: 0; box-shadow: none; break-after: page; }
+  .ra-page:last-child { break-after: auto; }
+  .ra-screen-only { display: none !important; }
+}

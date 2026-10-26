@@ -1,0 +1,66 @@
+@model Reports.DesignSystem.ReportDocument
+@using Reports.DesignSystem
+@{
+    // As fontes descem para a nuvem. Só as do relatório aparecem; com uma só, o chip fica no centro.
+    var providers = Model.Sources.Select(s => s.Provider).Distinct().ToList();
+    double Center(int i) => providers.Count == 1 ? 220 : 68 + i * (304.0 / (providers.Count - 1));
+    double Top(int i) => providers.Count > 2 && i > 0 && i < providers.Count - 1 ? 0 : 8;
+    string F(double v) => v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+    var onGrad = new ViewDataDictionary(ViewData) { ["OnGrad"] = true };
+}
+<article class="ra-page ra-page--cover">
+  <div class="ra-cover__top">
+    <div class="ra-page__brand"><svg aria-hidden="true"><use href="#ra-mark"/></svg>Relatórios de Ambientes</div>
+    <span class="ra-page__code">@Model.Code</span>
+  </div>
+
+  <div class="ra-cover__art" aria-hidden="true">
+    <svg viewBox="0 0 440 400">
+      <g font-family="IBM Plex Mono, monospace" font-size="13" font-weight="500" text-anchor="middle">
+        @for (var i = 0; i < providers.Count; i++)
+        {
+          var key = Ra.Key(providers[i]);
+          var cx = Center(i);
+          var y = Top(i);
+          @* <text> é pseudo-tag do Razor dentro de blocos de código; a sigla e os números vêm de enums, nunca do usuário. *@
+          <rect x="@F(cx - 28)" y="@F(y)" width="56" height="32" rx="8" fill="var(--provider-@key-soft)"/>
+          @Html.Raw($"<text x=\"{F(cx)}\" y=\"{F(y + 21)}\" fill=\"var(--provider-{key})\">{Ra.Mark(providers[i])}</text>")
+        }
+      </g>
+      <g stroke="var(--sky)" stroke-width="2" stroke-dasharray="3 5" fill="none" stroke-linecap="round" opacity=".8">
+        @for (var i = 0; i < providers.Count; i++)
+        {
+          var cx = Center(i);
+          var tx = 220 + (cx - 220) * 0.4;
+          <path d="M@F(cx) @F(Top(i) + 36) C@F(cx) 80 @F(tx) 80 @F(tx) 100"/>
+        }
+      </g>
+      <g fill="var(--sky)"><circle cx="172" cy="148" r="40"/><circle cx="220" cy="124" r="56"/><circle cx="268" cy="148" r="40"/><rect x="172" y="140" width="96" height="48" rx="8"/></g>
+      <path d="M196 214 l24 20 l24 -20" fill="none" stroke="var(--on-grad)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="140" y="252" width="160" height="148" rx="18" fill="var(--surface-raised)"/>
+      <rect x="166" y="282" width="108" height="12" rx="6" fill="#14b8a6"/>
+      <rect x="166" y="310" width="108" height="12" rx="6" fill="var(--doc-line)"/>
+      <rect x="166" y="338" width="72" height="12" rx="6" fill="var(--doc-line)"/>
+      <rect x="248" y="338" width="12" height="12" rx="3" fill="var(--indigo)"/>
+    </svg>
+  </div>
+
+  <div class="ra-cover__body">
+    <p class="ra-cover__eyebrow">Relatório de ambientes</p>
+    <h1 class="ra-cover__title">@Model.Title</h1>
+    <p class="ra-cover__subtitle">@Model.Subtitle</p>
+    <div class="ra-row ra-cover__sources">
+      @foreach (var source in Model.Sources)
+      {
+        @await Html.PartialAsync("/Views/DesignSystem/_SourceChip.cshtml", source, onGrad)
+      }
+    </div>
+    <div class="ra-cover__facts">
+      @foreach (var fact in Model.Facts)
+      {
+        <div class="ra-cover__fact"><span class="ra-label">@fact.Label</span><span class="ra-cover__fact-value">@fact.Value</span></div>
+      }
+      <div class="ra-cover__fact"><span class="ra-label">Estado geral</span><span>@await Html.PartialAsync("/Views/DesignSystem/_Badge.cshtml", Model.OverallStatus)</span></div>
+    </div>
+  </div>
+</article>

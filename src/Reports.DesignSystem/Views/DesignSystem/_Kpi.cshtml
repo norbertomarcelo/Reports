@@ -1,0 +1,7 @@
+@model Reports.DesignSystem.KpiVm
+@using Reports.DesignSystem
+<div class="@Ra.KpiClass(Model.Tone)">
+  <span class="ra-kpi__label">@Model.Label</span>
+  <span class="ra-kpi__value">@Model.Value</span>
+  @if (Model.Delta is not null) { <span class="ra-kpi__delta">@Model.Delta</span> }
+</div>

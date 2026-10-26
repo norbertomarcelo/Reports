@@ -1,0 +1,147 @@
+/* Relatórios de Ambientes — tokens. GERADO a partir de tokens.json; não edite à mão. */
+:root {
+  color-scheme: light;
+  --surface: #f4f8f8;
+  --surface-raised: #ffffff;
+  --surface-sunken: #e7efef;
+  --line: #d3e0e0;
+  --line-strong: #a9bfc0;
+  --ink: #0c1f22;
+  --ink-muted: #4a5f62;
+  --teal: #0f766e;
+  --teal-soft: #ccfbf1;
+  --on-teal: #ffffff;
+  --indigo: #1e40af;
+  --indigo-soft: #dbeafe;
+  --orange: #c2410c;
+  --orange-soft: #ffedd5;
+  --orange-fill: #ea580c;
+  --sky: #a5f3fc;
+  --doc-line: #cbd5e1;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+  --warning: #a16207;
+  --warning-soft: #fef9c3;
+  --danger: #b91c1c;
+  --danger-soft: #fee2e2;
+  --grad-start: #0f766e;
+  --grad-end: #1e40af;
+  --on-grad: #ffffff;
+  --on-grad-accent: #ccfbf1;
+  --provider-ad: var(--teal);
+  --provider-ad-soft: var(--teal-soft);
+  --provider-gh: var(--ink);
+  --provider-gh-soft: var(--surface-sunken);
+  --provider-az: var(--indigo);
+  --provider-az-soft: var(--indigo-soft);
+  --provider-aw: var(--orange);
+  --provider-aw-soft: var(--orange-soft);
+  --focus-ring: var(--teal);
+  --provider-ad-fill: var(--teal);
+  --provider-gh-fill: var(--ink);
+  --provider-az-fill: var(--indigo);
+  --provider-aw-fill: var(--orange-fill);
+  --grad: linear-gradient(135deg, var(--grad-start) 0%, var(--grad-end) 100%);
+
+  --font-display: "Sora", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  --text-cover: 600 48px/52px var(--font-display); --text-cover-tracking: -0.02em;
+  --text-display: 600 40px/44px var(--font-display); --text-display-tracking: -0.02em;
+  --text-h1: 600 28px/34px var(--font-display); --text-h1-tracking: -0.01em;
+  --text-h2: 600 18px/26px var(--font-display);
+  --text-subtitle: 400 22px/30px var(--font-display);
+  --text-body: 400 15px/24px var(--font-sans);
+  --text-body-strong: 600 15px/24px var(--font-sans);
+  --text-report-body: 400 13px/20px var(--font-sans);
+  --text-small: 400 13px/20px var(--font-sans);
+  --text-caption: 400 11px/16px var(--font-sans);
+  --text-label: 600 11px/16px var(--font-sans); --text-label-tracking: 0.06em;
+  --text-mono: 400 12px/18px var(--font-mono);
+  --text-metric: 500 24px/30px var(--font-mono);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-14: 56px;
+  --space-16: 64px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-pill: 9999px;
+  --radius-icon: 22%;
+
+  --shadow-card: 0 1px 2px rgba(12,31,34,.06), 0 4px 16px rgba(12,31,34,.06);
+  --shadow-pop: 0 4px 12px rgba(12,31,34,.12), 0 16px 40px rgba(12,31,34,.12);
+  --shadow-page: 0 2px 6px rgba(12,31,34,.08), 0 12px 32px rgba(12,31,34,.10);
+}
+
+/* Tema escuro: segue o sistema, a menos que data-theme="light" force o claro. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface: #0b1416;
+    --surface-raised: #12201f;
+    --surface-sunken: #071012;
+    --line: #1f3533;
+    --line-strong: #35514f;
+    --ink: #e6f1f1;
+    --ink-muted: #93abad;
+    --teal: #2dd4bf;
+    --teal-soft: #0b3a36;
+    --on-teal: #04201d;
+    --indigo: #93c5fd;
+    --indigo-soft: #172554;
+    --orange: #fb923c;
+    --orange-soft: #431407;
+    --orange-fill: #f97316;
+    --sky: #67e8f9;
+    --doc-line: #334155;
+    --success: #4ade80;
+    --success-soft: #052e16;
+    --warning: #facc15;
+    --warning-soft: #332605;
+    --danger: #f87171;
+    --danger-soft: #3f0d0d;
+    --grad-start: #0f766e;
+    --grad-end: #1e40af;
+    --on-grad: #ffffff;
+    --on-grad-accent: #ccfbf1;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #0b1416;
+  --surface-raised: #12201f;
+  --surface-sunken: #071012;
+  --line: #1f3533;
+  --line-strong: #35514f;
+  --ink: #e6f1f1;
+  --ink-muted: #93abad;
+  --teal: #2dd4bf;
+  --teal-soft: #0b3a36;
+  --on-teal: #04201d;
+  --indigo: #93c5fd;
+  --indigo-soft: #172554;
+  --orange: #fb923c;
+  --orange-soft: #431407;
+  --orange-fill: #f97316;
+  --sky: #67e8f9;
+  --doc-line: #334155;
+  --success: #4ade80;
+  --success-soft: #052e16;
+  --warning: #facc15;
+  --warning-soft: #332605;
+  --danger: #f87171;
+  --danger-soft: #3f0d0d;
+  --grad-start: #0f766e;
+  --grad-end: #1e40af;
+  --on-grad: #ffffff;
+  --on-grad-accent: #ccfbf1;
+}
