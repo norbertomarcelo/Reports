@@ -55,3 +55,10 @@
 }
 
 .ra-chapters h3 { font: var(--text-body-strong); margin: 0; }
+
+/* Visão geral: KPIs e alertas em coluna (a grade e os alertas já vêm do ra.css). */
+.ra-overview { display: flex; flex-direction: column; gap: var(--space-6); }
+.ra-overview .ra-h1 { margin: 0; }
+
+/* Chips de fonte da capa (o DS usa style="gap:var(--space-2)" no exemplo). */
+.ra-cover__sources { gap: var(--space-2); }
