@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Reports.AzureDevOps.Services;
 using Reports.AzureDevOps.Settings;
 
@@ -17,6 +18,9 @@ public static class AzureDevOpsReportsServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
         services.AddAzureDevOpsClient();
+
+        // O relógio da capa; TryAdd deixa quem usa a biblioteca (e os testes) trocá-lo.
+        services.TryAddSingleton(TimeProvider.System);
 
         services.AddScoped<AzureDevOpsService>();
         services.AddScoped<AzureDevOpsReportService>();

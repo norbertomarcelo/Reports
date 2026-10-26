@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Reports.AzureDevOps.Interfaces;
 using Reports.Api.Services.Pdf;
+using Reports.AzureDevOps.Tests;
 using Reports.AzureDevOps.Tests.Fakes;
 using Reports.Api.Tests.Fakes;
 
@@ -33,6 +34,7 @@ public static class ReportHost
                 services.AddSingleton<IAzureDevOpsApi>(api);
                 services.AddSingleton<IAzureDevOpsAnalyticsApi>(analytics);
                 services.AddSingleton<IPdfRenderer>(pdf);
+                services.AddSingleton<TimeProvider>(new FixedTimeProvider(TestSettings.Now));
             });
         });
 

@@ -1,4 +1,5 @@
 using Reports.AzureDevOps.Services;
+using Reports.DesignSystem;
 
 namespace Reports.AzureDevOps.Views.Models;
 
@@ -6,8 +7,11 @@ namespace Reports.AzureDevOps.Views.Models;
 /// Dados do relatório, já na hierarquia de capítulos e com a numeração calculada.
 /// <c>Projects</c> <c>null</c> = capítulo de projetos não pedido.
 /// </summary>
-public class ReportViewModel
+public class ReportViewModel : IReportModel
 {
+    /// <summary>Capa e visão geral do relatório (spec 020); o layout do design system as desenha.</summary>
+    public required ReportDocument Document { get; init; }
+
     public Chapter<IReadOnlyList<ProjectRow>>? Projects { get; init; }
 
     /// <summary>Capítulo geral de itens de trabalho: uma linha por projeto. <c>null</c> = não pedido.</summary>

@@ -4,6 +4,7 @@ using Reports.AzureDevOps.Dtos.Requests;
 using Reports.AzureDevOps.Models;
 using Reports.AzureDevOps.Settings;
 using Reports.AzureDevOps.Views.Models;
+using Reports.DesignSystem;
 
 namespace Reports.AzureDevOps.Services;
 
@@ -12,11 +13,16 @@ public class AzureDevOpsReportService
     private static readonly StringComparer Comparer = ReportComparer.PtBr;
 
     private readonly AzureDevOpsService _azureDevOps;
+    private readonly TimeProvider _time;
+    private readonly string _organization;
     private readonly string[] _internalDomains;
 
-    public AzureDevOpsReportService(AzureDevOpsService azureDevOps, IOptions<AzureDevOpsOptions> options)
+    public AzureDevOpsReportService(
+        AzureDevOpsService azureDevOps, IOptions<AzureDevOpsOptions> options, TimeProvider time)
     {
         _azureDevOps = azureDevOps;
+        _time = time;
+        _organization = options.Value.Organization;
         _internalDomains = options.Value.InternalDomains;
     }
 
@@ -137,6 +143,8 @@ public class AzureDevOpsReportService
 
         return new ReportViewModel
         {
+            Document = BuildDocument(sections, orderedProjects, teamsByProject, membersByTeam, chapters,
+                summaryByProject, repositoriesByProject),
             Projects = outline.Projects is null
                 ? null
                 : new Chapter<IReadOnlyList<ProjectRow>>(outline.Projects,
@@ -151,6 +159,59 @@ public class AzureDevOpsReportService
             ProjectChapters = chapters,
             NoProjects = !sections.Projects && projects.Count == 0
         };
+    }
+
+    /// <summary>
+    /// Capa e visão geral (spec 020), só com o que as seções pedidas já buscaram: nenhuma chamada nova (RF-10).
+    /// </summary>
+    private ReportDocument BuildDocument(
+        ReportSections sections,
+        List<Project> projects,
+        Dictionary<string, List<Team>> teamsByProject,
+        Dictionary<string, List<TeamMember>> membersByTeam,
+        List<ProjectChapter> chapters,
+        Dictionary<string, WorkItemSummary> summaryByProject,
+        Dictionary<string, List<RepositoryRow>> repositoriesByProject)
+    {
+        // Usuários distintos da organização, sem grupos, pela mesma chave de "Usuários do projeto" (spec 016).
+        var people = sections.Users
+            ? membersByTeam.Values.SelectMany(m => m).Select(ToUserRow)
+                .Where(m => !m.Row.IsGroup).GroupBy(m => m.Key).Select(g => g.First()).ToList()
+            : [];
+
+        var repositories = sections.Repositories
+            ? projects.SelectMany(p => repositoriesByProject.GetValueOrDefault(p.Id) ?? []).ToList()
+            : [];
+
+        var overview = new OverviewData(
+            projects.Count,
+            sections.Teams || sections.Users ? teamsByProject.Values.Sum(t => t.Count) : null,
+            sections.Teams && sections.Users ? chapters.Sum(c => c.Teams!.Content.Count(t => t.NoAdmin)) : null,
+            sections.Users ? people.Count : null,
+            sections.Users && _internalDomains.Length > 0 ? people.Count(p => p.Row.IsExternal) : null,
+            sections.WorkItems ? summaryByProject.Values.Sum(s => s.Open) : null,
+            sections.WorkItems ? summaryByProject.Values.Sum(s => s.Closed) : null,
+            sections.WorkItems ? summaryByProject.Values.Count(s => s.Partial) : null,
+            sections.Repositories ? repositories.Count : null,
+            sections.Repositories ? repositories.Count(r => r.IsEmpty) : null,
+            // Vazio e desativado ao mesmo tempo é mostrado só como vazio (_RepositoriesTable); aqui também.
+            sections.Repositories ? repositories.Count(r => r.IsDisabled && !r.IsEmpty) : null);
+
+        var alerts = ReportOverview.Alerts(overview);
+        var now = _time.GetUtcNow();
+        return new ReportDocument(
+            ReportCode.Create(Provider.AzureDevOps, now),
+            _organization,
+            ReportOverview.SectionsText(sections),
+            [new SourceVm(Provider.AzureDevOps, _organization)],
+            [
+                new ReportFact("Gerado em", Ra.DateTime(now.UtcDateTime) + " UTC"),
+                new ReportFact("Projetos", Ra.Number(projects.Count)),
+                new ReportFact("Seções", $"{ReportOverview.SectionCount(sections)} de {ReportOverview.SectionTotal}")
+            ],
+            ReportOverview.OverallStatus(overview, alerts),
+            ReportOverview.Kpis(overview),
+            alerts);
     }
 
     private async Task<RepositoryRow> ToRepositoryRowAsync(string projectId, GitRepository repository)
