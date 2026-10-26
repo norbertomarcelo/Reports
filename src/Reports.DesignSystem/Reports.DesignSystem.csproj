@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Razor.Templating.Core" Version="2.1.0" />
+  </ItemGroup>
+
+  <!-- CSS e fontes do design system, embutidos no assembly e depois no HTML (spec 020, RF-03). -->
+  <ItemGroup>
+    <EmbeddedResource Include="design-system/tokens/tokens.css" LogicalName="ds/tokens.css" />
+    <EmbeddedResource Include="design-system/css/*.css" LogicalName="ds/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="design-system/fonts/*.woff2" LogicalName="ds/fonts/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="design-system/assets/mark.svg" LogicalName="ds/mark.svg" />
+    <EmbeddedResource Include="Styles/report-flow.css" LogicalName="ds/report-flow.css" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Reports.DesignSystem.Tests" />
+  </ItemGroup>
+
+</Project>
