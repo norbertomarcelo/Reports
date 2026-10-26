@@ -19,7 +19,18 @@ public sealed class PlaywrightPdfRenderer : IPdfRenderer, IAsyncDisposable
         try
         {
             await page.SetContentAsync(html);
-            return await page.PdfAsync(new PagePdfOptions { Format = "A4", PrintBackground = true });
+
+            // Sora e IBM Plex vêm embutidas no HTML (data URI); sem esperar, o PDF sairia com a fonte de reserva.
+            await page.EvaluateAsync("() => document.fonts.ready");
+
+            // PreferCSSPageSize: o @page do relatório (A4, margens, capa sem margem) vale mais que o formato daqui.
+            // PrintBackground: sem ele o degradê e os fundos do design system somem.
+            return await page.PdfAsync(new PagePdfOptions
+            {
+                Format = "A4",
+                PrintBackground = true,
+                PreferCSSPageSize = true
+            });
         }
         finally
         {

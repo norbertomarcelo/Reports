@@ -54,7 +54,22 @@
   .ra-overview { break-after: page; }
 }
 
-.ra-chapters h3 { font: var(--text-body-strong); margin: 0; }
+.ra-chapters h3 { font: var(--text-body-strong); }
+
+/* Ritmo vertical dos capítulos. Em bloco, não em flex: o Chromium quebra melhor entre folhas assim. */
+.ra-chapters h1 { margin: var(--space-8) 0 var(--space-3); }
+.ra-chapters h2 { margin: var(--space-6) 0 var(--space-3); }
+.ra-chapters h3 { margin: var(--space-4) 0 var(--space-2); }
+.ra-chapters p { margin: 0 0 var(--space-3); }
+.ra-chapters .ra-table-wrap, .ra-chapters .ra-alert { margin-bottom: var(--space-3); }
+
+/* Cabeçalhos e células quebram linha. Com o nowrap do ra.css, a tabela de projetos (8 colunas) passa da largura
+   da folha e o Chromium encolhe o DOCUMENTO INTEIRO para caber, com a capa e tudo (testado no ReportPdfTests). */
+.ra-chapters .ra-table th { white-space: normal; }
+.ra-chapters .ra-table td { overflow-wrap: anywhere; }
+/* A folha tem ~688px úteis e a tabela de projetos tem 8 colunas: com os 10px laterais do ra.css só o
+   preenchimento já passava de 160px. --space-2 (8px) é o espaço do DS mais próximo. */
+.ra-chapters .ra-table th, .ra-chapters .ra-table td { padding-inline: var(--space-2); }
 
 /* Visão geral: KPIs e alertas em coluna (a grade e os alertas já vêm do ra.css). */
 .ra-overview { display: flex; flex-direction: column; gap: var(--space-6); }
